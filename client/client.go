@@ -35,6 +35,10 @@ type Options struct {
 const (
 	handshakeTimeout = 10 * time.Second
 	maxBackoff       = 30 * time.Second
+	// stableThreshold：runOnce 存活超过该时长视为一波健康连接，
+	// 断开后退避重置。短于此值的失败（握手即败/秒断）不重置，
+	// 保留对抖动 hub 的退避保护。
+	stableThreshold = 30 * time.Second
 )
 
 // errUnauthorized 表示 hub 拒绝了凭据（401）。
@@ -51,12 +55,18 @@ func Run(ctx context.Context, opts Options) error {
 	probeTarget(target)
 	backoff := time.Second
 	for {
+		start := time.Now()
 		err := runOnce(ctx, opts, target)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		if errors.Is(err, errUnauthorized) {
 			return err // 重试不会改变凭据
+		}
+		if time.Since(start) >= stableThreshold {
+			// 健康连接后的断开视为新事件：从历史最大退避重新开始，
+			// 避免数小时前的失败风暴永久抬高重连延迟
+			backoff = time.Second
 		}
 		log.Printf("tunnel closed: %v; reconnecting in %s", err, backoff)
 		select {
