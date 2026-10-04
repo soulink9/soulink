@@ -4,10 +4,17 @@
 package forward
 
 import (
+	"crypto/tls"
 	"io"
 	"net"
 	"time"
 )
+
+// Target 是归一化后的转发目标。
+type Target struct {
+	Addr string // host:port 拨号地址
+	TLS  bool   // https 目标：TLS 拨号（SNI = host）
+}
 
 // dialTimeout 本地目标拨号超时。
 const dialTimeout = 10 * time.Second
@@ -20,11 +27,24 @@ const badGateway = "HTTP/1.1 502 Bad Gateway\r\n" +
 	"Connection: close\r\n" +
 	"\r\nsoulink: local unreachable"
 
-// Handle 把一条 yamux stream 与本地 TCP 连接双向桥接，直到任一端关闭。
-func Handle(stream net.Conn, target string) {
+// dial 按 Target 拨号：TLS 目标用 SNI 握手，否则纯 TCP。
+func dial(t Target) (net.Conn, error) {
+	d := &net.Dialer{Timeout: dialTimeout}
+	if !t.TLS {
+		return d.Dial("tcp", t.Addr)
+	}
+	host, _, err := net.SplitHostPort(t.Addr)
+	if err != nil {
+		return nil, err
+	}
+	return tls.DialWithDialer(d, "tcp", t.Addr, &tls.Config{ServerName: host})
+}
+
+// Handle 把一条 yamux stream 与目标连接双向桥接，直到任一端关闭。
+func Handle(stream net.Conn, target Target) {
 	defer stream.Close()
 
-	lc, err := net.DialTimeout("tcp", target, dialTimeout)
+	lc, err := dial(target)
 	if err != nil {
 		stream.Write([]byte(badGateway))
 		return

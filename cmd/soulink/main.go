@@ -31,9 +31,18 @@ func main() {
 	httpCmd := &cobra.Command{
 		Use:   "http <target>",
 		Short: "Expose a local HTTP/WebSocket service",
-		Args:  cobra.ExactArgs(1),
+		Long: `Expose a local HTTP/WebSocket service through the hub.
+
+<target> 支持以下形式：
+  3000                      本机端口（等价 127.0.0.1:3000）
+  localhost:3000            host:port
+  http://192.168.1.10:8080  HTTP 目标（缺省端口 80）
+  https://www.example.com   HTTPS 目标（缺省端口 443，TLS 拨号）
+
+注意：guest 隧道只能指向 127.0.0.1 / localhost；注册用户可指向任意 IP 或域名。`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			opts.Target = client.NormalizeTarget(args[0])
+			opts.Target = args[0]
 			resolveDefaults(&opts)
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()

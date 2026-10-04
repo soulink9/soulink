@@ -27,7 +27,7 @@ type Options struct {
 	Server    string // hub 地址，如 "localhost:8080" 或 "wss://hub.example.com"
 	Token     string
 	Subdomain string // 空 = 随机分配
-	Target    string // 本地目标，host:port
+	Target    string // 转发目标：端口 / host:port / http(s)://host[:port]，见 ParseTarget
 	Insecure  bool   // wss 跳过证书校验（自签场景）
 }
 
@@ -37,10 +37,15 @@ const (
 )
 
 // Run 维持隧道长连接：断线后指数退避重连，直到 ctx 取消。
+// target 解析失败属配置错误，立即返回不重试。
 func Run(ctx context.Context, opts Options) error {
+	target, err := ParseTarget(opts.Target)
+	if err != nil {
+		return err
+	}
 	backoff := time.Second
 	for {
-		err := runOnce(ctx, opts)
+		err := runOnce(ctx, opts, target)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -57,7 +62,7 @@ func Run(ctx context.Context, opts Options) error {
 	}
 }
 
-func runOnce(ctx context.Context, opts Options) error {
+func runOnce(ctx context.Context, opts Options, target forward.Target) error {
 	u, err := connectURL(opts.Server)
 	if err != nil {
 		return err
@@ -83,6 +88,7 @@ func runOnce(ctx context.Context, opts Options) error {
 		Version:            1,
 		ClientName:         clientName(),
 		RequestedSubdomain: opts.Subdomain,
+		Target:             target.Addr,
 	}
 	ws.SetWriteDeadline(time.Now().Add(handshakeTimeout))
 	if err := ws.WriteJSON(reg); err != nil {
@@ -115,7 +121,7 @@ func runOnce(ctx context.Context, opts Options) error {
 		ttl := time.Duration(reply.TunnelTTLSec) * time.Second
 		fmt.Printf("⚠ 限时通道：隧道将于 %s 后自动回收（注册用户可获得不限时隧道）\n", ttl)
 	}
-	log.Printf("tunnel %s online (%s), forwarding to %s", reply.TunnelID, reply.Tier, opts.Target)
+	log.Printf("tunnel %s online (%s), forwarding to %s", reply.TunnelID, reply.Tier, target.Addr)
 
 	// ---- 数据面：yamux 会话 ----
 	sess, err := yamux.Client(wsconn.New(ws), nil)
@@ -138,7 +144,7 @@ func runOnce(ctx context.Context, opts Options) error {
 		if err != nil {
 			return fmt.Errorf("accept stream: %w", err)
 		}
-		go forward.Handle(stream, opts.Target)
+		go forward.Handle(stream, target)
 	}
 }
 
@@ -176,13 +182,58 @@ func clientName() string {
 	return name
 }
 
-// NormalizeTarget 把 "3000" 之类的裸端口补全为 "127.0.0.1:3000"。
-func NormalizeTarget(target string) string {
-	if _, _, err := net.SplitHostPort(target); err == nil {
-		return target
+// ParseTarget 把用户输入归一化为转发目标。支持的输入形式：
+//
+//	3000                       → 127.0.0.1:3000        (TCP)
+//	http                       → 127.0.0.1:80          (TCP，服务名按 /etc/services 解析)
+//	localhost:3000             → localhost:3000        (TCP)
+//	192.168.1.10:8080          → 192.168.1.10:8080     (TCP)
+//	http://example.com         → example.com:80        (TCP)
+//	http://example.com:8080    → example.com:8080      (TCP)
+//	https://www.baidu.com      → www.baidu.com:443     (TLS，SNI=host)
+//	https://example.com:8443   → example.com:8443      (TLS)
+//
+// URL 带路径/查询（如 http://host/api）属于误用，直接报错；
+// 其他无法识别的输入同样报错，由调用方在启动期退出。
+func ParseTarget(raw string) (forward.Target, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return forward.Target{}, fmt.Errorf("target is required")
 	}
-	if _, err := net.LookupPort("tcp", target); err == nil {
-		return net.JoinHostPort("127.0.0.1", target)
+
+	if strings.Contains(raw, "://") {
+		u, err := url.Parse(raw)
+		if err != nil {
+			return forward.Target{}, fmt.Errorf("invalid target %q: %w", raw, err)
+		}
+		if u.Scheme != "http" && u.Scheme != "https" {
+			return forward.Target{}, fmt.Errorf("unsupported target scheme %q (want http or https)", u.Scheme)
+		}
+		if u.Path != "" && u.Path != "/" || u.RawQuery != "" {
+			return forward.Target{}, fmt.Errorf("target %q must not contain a path or query — soulink forwards the whole origin", raw)
+		}
+		host := u.Hostname()
+		if host == "" {
+			return forward.Target{}, fmt.Errorf("invalid target %q: missing host", raw)
+		}
+		port := u.Port()
+		if port == "" {
+			if u.Scheme == "https" {
+				port = "443"
+			} else {
+				port = "80"
+			}
+		}
+		return forward.Target{Addr: net.JoinHostPort(host, port), TLS: u.Scheme == "https"}, nil
 	}
-	return target
+
+	// 已是 host:port 形式
+	if _, _, err := net.SplitHostPort(raw); err == nil {
+		return forward.Target{Addr: raw}, nil
+	}
+	// 裸端口或服务名 → 回环
+	if _, err := net.LookupPort("tcp", raw); err == nil {
+		return forward.Target{Addr: net.JoinHostPort("127.0.0.1", raw)}, nil
+	}
+	return forward.Target{}, fmt.Errorf("invalid target %q: want a port (3000), host:port, or http(s)://host[:port]", raw)
 }
