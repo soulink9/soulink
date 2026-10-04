@@ -17,10 +17,14 @@ import (
 
 const defaultGuestToken = "soulink-guest" // 与 hub 默认配置一致的公开 token
 
+// version 由发布流程经 -ldflags "-X main.version=..." 注入。
+var version = "dev"
+
 func main() {
 	root := &cobra.Command{
-		Use:   "soulink",
-		Short: "Share local web services through a soulink hub",
+		Use:     "soulink",
+		Short:   "Share local web services through a soulink hub",
+		Version: version,
 	}
 
 	var opts client.Options
