@@ -111,6 +111,10 @@ func runOnce(ctx context.Context, opts Options) error {
 	for _, u := range reply.URLs {
 		fmt.Printf("→ %s\n", u)
 	}
+	if reply.TunnelTTLSec > 0 {
+		ttl := time.Duration(reply.TunnelTTLSec) * time.Second
+		fmt.Printf("⚠ 限时通道：隧道将于 %s 后自动回收（注册用户可获得不限时隧道）\n", ttl)
+	}
 	log.Printf("tunnel %s online (%s), forwarding to %s", reply.TunnelID, reply.Tier, opts.Target)
 
 	// ---- 数据面：yamux 会话 ----

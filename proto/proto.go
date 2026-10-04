@@ -14,11 +14,12 @@ const (
 
 // 错误码
 const (
-	ErrUnauthorized      = "unauthorized"
-	ErrSubdomainTaken    = "subdomain_taken"
-	ErrSubdomainInvalid  = "subdomain_invalid"
-	ErrSubdomainForbid   = "subdomain_forbidden"
-	ErrBadRequest        = "bad_request"
+	ErrUnauthorized     = "unauthorized"
+	ErrSubdomainTaken   = "subdomain_taken"
+	ErrSubdomainInvalid = "subdomain_invalid"
+	ErrSubdomainForbid  = "subdomain_forbidden"
+	ErrTunnelLimit      = "tunnel_limit"
+	ErrBadRequest       = "bad_request"
 )
 
 // Register 是 wss 升级后 local 发送的第一条消息（JSON 文本帧）。
@@ -31,10 +32,11 @@ type Register struct {
 
 // Registered 是 hub 对 Register 的成功应答，此后连接进入 yamux 数据面。
 type Registered struct {
-	Type     string   `json:"type"` // 固定 "registered"
-	TunnelID string   `json:"tunnel_id"`
-	URLs     []string `json:"urls"`
-	Tier     string   `json:"tier"`
+	Type         string   `json:"type"` // 固定 "registered"
+	TunnelID     string   `json:"tunnel_id"`
+	URLs         []string `json:"urls"`
+	Tier         string   `json:"tier"`
+	TunnelTTLSec int64    `json:"tunnel_ttl_sec,omitempty"` // >0 表示隧道会被强制回收
 }
 
 // Error 是 hub 的失败应答。
