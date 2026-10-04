@@ -21,13 +21,34 @@ const defaultGuestToken = "soulink-guest" // 与 hub 默认配置一致的公开
 var version = "dev"
 
 func main() {
-	root := &cobra.Command{
-		Use:     "soulink",
-		Short:   "Share local web services through a soulink hub",
-		Version: version,
+	var opts client.Options
+	runHTTP := func(cmd *cobra.Command, args []string) error {
+		opts.Target = args[0]
+		resolveDefaults(&opts)
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return client.Run(ctx, opts)
 	}
 
-	var opts client.Options
+	root := &cobra.Command{
+		Use:     "soulink [target]",
+		Short:   "Share local web services through a soulink hub",
+		Version: version,
+		// 运行期错误（如 Ctrl+C、认证失败）不属于用法错误，不打印 Usage；
+		// 错误信息由 main 统一输出一次
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		// 裸目标等价 http 子命令：soulink 3000 ≡ soulink http 3000；
+		// 无参数时打印帮助
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
+			return runHTTP(cmd, args)
+		},
+	}
+
 	httpCmd := &cobra.Command{
 		Use:   "http <target>",
 		Short: "Expose a local HTTP/WebSocket service",
@@ -41,18 +62,14 @@ func main() {
 
 注意：guest 隧道只能指向 127.0.0.1 / localhost；注册用户可指向任意 IP 或域名。`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			opts.Target = args[0]
-			resolveDefaults(&opts)
-			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-			defer stop()
-			return client.Run(ctx, opts)
-		},
+		RunE: runHTTP,
 	}
-	httpCmd.Flags().StringVar(&opts.Server, "server", "", "hub address (default: from `soulink login`)")
-	httpCmd.Flags().StringVar(&opts.Token, "token", "", "access token (default: from `soulink login`, else guest)")
+	httpCmd.Flags().StringVar(&opts.Server, "server", "", "hub address (default: from soulink login)")
+	httpCmd.Flags().StringVar(&opts.Token, "token", "", "access token (default: from soulink login, else guest)")
 	httpCmd.Flags().StringVar(&opts.Subdomain, "subdomain", "", "requested subdomain (registered users only)")
 	httpCmd.Flags().BoolVar(&opts.Insecure, "insecure", false, "skip TLS verification for wss")
+	// root 与 http 共享同一组 flag（底层都写入 opts）
+	root.Flags().AddFlagSet(httpCmd.Flags())
 
 	var loginServer string
 	loginCmd := &cobra.Command{

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -36,18 +37,26 @@ const (
 	maxBackoff       = 30 * time.Second
 )
 
+// errUnauthorized 表示 hub 拒绝了凭据（401）。
+// 重试不会改变结果，Run 遇此错误直接退出。
+var errUnauthorized = errors.New("unauthorized: token 无效或已吊销（检查 `soulink login` 或 --token）")
+
 // Run 维持隧道长连接：断线后指数退避重连，直到 ctx 取消。
-// target 解析失败属配置错误，立即返回不重试。
+// target 解析失败、认证被拒（401）属配置错误，立即返回不重试。
 func Run(ctx context.Context, opts Options) error {
 	target, err := ParseTarget(opts.Target)
 	if err != nil {
 		return err
 	}
+	probeTarget(target)
 	backoff := time.Second
 	for {
 		err := runOnce(ctx, opts, target)
 		if ctx.Err() != nil {
 			return ctx.Err()
+		}
+		if errors.Is(err, errUnauthorized) {
+			return err // 重试不会改变凭据
 		}
 		log.Printf("tunnel closed: %v; reconnecting in %s", err, backoff)
 		select {
@@ -60,6 +69,18 @@ func Run(ctx context.Context, opts Options) error {
 			backoff = maxBackoff
 		}
 	}
+}
+
+// probeTarget 启动期一次性探测目标可达性，仅告警不阻断：
+// 目标服务生命周期独立于隧道（可能晚启动/重启中），隧道仍正常建立，
+// 但用户应第一时间知道「现在访问会是 502」。
+func probeTarget(t forward.Target) {
+	c, err := net.DialTimeout("tcp", t.Addr, 2*time.Second)
+	if err != nil {
+		log.Printf("⚠ 目标 %s 当前不可达（%v）；隧道将正常建立，访客在目标就绪前会看到 502", t.Addr, err)
+		return
+	}
+	c.Close()
 }
 
 func runOnce(ctx context.Context, opts Options, target forward.Target) error {
@@ -76,8 +97,11 @@ func runOnce(ctx context.Context, opts Options, target forward.Target) error {
 
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+opts.Token)
-	ws, _, err := dialer.DialContext(ctx, u, header)
+	ws, resp, err := dialer.DialContext(ctx, u, header)
 	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
+			return errUnauthorized
+		}
 		return fmt.Errorf("dial hub: %w", err)
 	}
 	defer ws.Close()

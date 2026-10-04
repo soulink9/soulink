@@ -6,6 +6,7 @@ package forward
 import (
 	"crypto/tls"
 	"io"
+	"log"
 	"net"
 	"time"
 )
@@ -46,6 +47,8 @@ func Handle(stream net.Conn, target Target) {
 
 	lc, err := dial(target)
 	if err != nil {
+		// 访客会收到 502；local 端必须留痕，否则无法区分「目标挂了」与「隧道断了」
+		log.Printf("目标 %s 拨号失败（访客已回 502）: %v", target.Addr, err)
 		stream.Write([]byte(badGateway))
 		return
 	}
