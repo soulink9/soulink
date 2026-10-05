@@ -17,6 +17,12 @@ import (
 
 const defaultGuestToken = "soulink-guest" // 与 hub 默认配置一致的公开 token
 
+// defaultServer 与 defaultGuestToken 共同描述「官方部署」的身份：hub 地址与 guest 公开 token
+// 必须成对匹配（hub 侧 guest_token 不一致时 guest 通道回 401），换部署时两者一起改。
+// 用 var 而非 const，以便经 -ldflags "-X main.defaultServer=..." 覆盖；置空即恢复「必须显式指定地址」。
+// 必须带 scheme：client 对裸 host 补的是 ws://（明文），只有 https:// 才走 wss。
+var defaultServer = "https://hub.soulink.cam"
+
 // version 由发布流程经 -ldflags "-X main.version=..." 注入。
 var version = "dev"
 
@@ -64,7 +70,7 @@ func main() {
 		Args: cobra.ExactArgs(1),
 		RunE: runHTTP,
 	}
-	httpCmd.Flags().StringVar(&opts.Server, "server", "", "hub address (default: from soulink login)")
+	httpCmd.Flags().StringVar(&opts.Server, "server", "", "hub address (default: from soulink login, else built-in)")
 	httpCmd.Flags().StringVar(&opts.Token, "token", "", "access token (default: from soulink login, else guest)")
 	httpCmd.Flags().StringVar(&opts.Subdomain, "subdomain", "", "requested subdomain (registered users only)")
 	httpCmd.Flags().BoolVar(&opts.Insecure, "insecure", false, "skip TLS verification for wss")
@@ -76,10 +82,15 @@ func main() {
 		Use:   "login",
 		Short: "Save hub address and your token locally",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if loginServer == "" {
+			// 未指定时用内置默认（默认被清空的构建下仍要求显式给出）
+			server := loginServer
+			if server == "" {
+				server = defaultServer
+			}
+			if server == "" {
 				return fmt.Errorf("--server is required")
 			}
-			fmt.Printf("在 %s 登录后，进入「我的 Token」页面创建并复制 token。\n", loginServer)
+			fmt.Printf("在 %s 登录后，进入「我的 Token」页面创建并复制 token。\n", server)
 			fmt.Print("粘贴 token: ")
 			token, err := bufio.NewReader(os.Stdin).ReadString('\n')
 			if err != nil {
@@ -90,7 +101,8 @@ func main() {
 				return fmt.Errorf("token is empty")
 			}
 			cfg, _ := config.Load()
-			cfg.Server = loginServer
+			// 显式写入解析结果：配置文件记录的是用户的选择，不随后续二进制默认值漂移
+			cfg.Server = server
 			cfg.Token = token
 			if err := config.Save(cfg); err != nil {
 				return err
@@ -99,7 +111,7 @@ func main() {
 			return nil
 		},
 	}
-	loginCmd.Flags().StringVar(&loginServer, "server", "", "hub address (e.g. https://hub.example.com)")
+	loginCmd.Flags().StringVar(&loginServer, "server", "", "hub address (default: built-in)")
 
 	root.AddCommand(httpCmd, loginCmd)
 	if err := root.Execute(); err != nil {
@@ -108,11 +120,14 @@ func main() {
 	}
 }
 
-// resolveDefaults 按 flag > 配置文件 > guest 的顺序补齐 server/token。
+// resolveDefaults 补齐运行参数：server 为 flag > 配置文件 > 内置默认，token 为 flag > 配置文件 > guest。
 func resolveDefaults(opts *client.Options) {
 	cfg, _ := config.Load()
 	if opts.Server == "" {
 		opts.Server = cfg.Server
+	}
+	if opts.Server == "" {
+		opts.Server = defaultServer
 	}
 	if opts.Token == "" {
 		opts.Token = cfg.Token
