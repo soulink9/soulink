@@ -13,8 +13,11 @@ builds:
       - CGO_ENABLED=0
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
+    # 内置默认 hub 地址的来源是源码里的 main.defaultServer；此处仅在设置了
+    # SOULINK_DEFAULT_SERVER 时追加覆盖（换牌/自托管发布用）。未设置则不注入，
+    # 避免同一地址在源码与发布配置里出现两份真相。
     ldflags:
-      - -s -w -X main.version={{.Version}}
+      - -s -w -X main.version={{.Version}}{{ if isEnvSet "SOULINK_DEFAULT_SERVER" }} -X main.defaultServer={{ .Env.SOULINK_DEFAULT_SERVER }}{{ end }}
 
 archives:
   - id: default

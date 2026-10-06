@@ -34,8 +34,9 @@ soulink http 192.168.1.10:8080
 （server 缺省为 `https://hub.soulink.cam`，token 缺省走 guest 通道）。
 `--insecure` 可跳过 hub 自签证书校验。
 
-> 内置默认地址是「官方部署」身份的一部分，与内置 guest token 成对；自托管构建可用
-> `-ldflags "-X main.defaultServer=https://your-hub"` 覆盖，置空则恢复「每次必须显式指定 `--server`」。
+> 内置默认地址是「官方部署」身份的一部分，与内置 guest token 成对。覆盖方式：
+> 手工构建用 `-ldflags "-X main.defaultServer=https://your-hub"`（**置空**即恢复「每次必须显式指定 `--server`」）；
+> 走 GoReleaser 则设环境变量 `SOULINK_DEFAULT_SERVER=https://your-hub`，不设即沿用源码内置值，无需改发布配置。
 
 断线自动重连（指数退避），重连后尽量保持原子域名。
 
