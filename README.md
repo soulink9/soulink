@@ -14,25 +14,30 @@ go install github.com/soulink/soulink-local/cmd/soulink@latest
 ## 用法
 
 ```bash
-# 1. 登录（在 hub 网站注册并创建 token 后粘贴）
-soulink login                                    # 用内置默认 hub 地址
-soulink login --server https://hub.example.com   # 自托管 hub 时显式指定
+# 1. 配置（在 hub 网站注册并创建 token 后写入）
+soulink config set server https://hub.soulink.cam   # 官方部署可省略（内置默认）
+soulink config set token slk_xxx                    # 自托管 hub 时先 set server
+
+soulink config show    # 查看生效配置（token 打码，标注来源）
+soulink config unset token
 
 # 2. 分享本地 3000 端口，指定子域名
 soulink http 3000 --subdomain demo
 # → https://demo.hub.example.com
-# → https://hub.example.com/s/demo/   （路径模式备用地址）
 
-# 免登录（guest 通道：随机域名、限时回收）
+# 免配置（guest 通道：随机域名、限时回收）
 soulink http 3000
 
 # 分享局域网内其他机器
 soulink http 192.168.1.10:8080
 ```
 
-参数优先级：`--server` / `--token` 命令行 > `~/.soulink/config.yaml`（login 写入）> 内置默认
+参数优先级：`--server` / `--token` 命令行 > `SOULINK_SERVER` / `SOULINK_TOKEN` 环境变量
+（适合 CI/容器）> `~/.soulink/config.yaml`（config set 写入）> 内置默认
 （server 缺省为 `https://hub.soulink.cam`，token 缺省走 guest 通道）。
 `--insecure` 可跳过 hub 自签证书校验。
+
+shell 自动补全：`soulink completion bash|zsh|fish|powershell`（按命令输出的说明安装）。
 
 > 内置默认地址是「官方部署」身份的一部分，与内置 guest token 成对。覆盖方式：
 > 手工构建用 `-ldflags "-X main.defaultServer=https://your-hub"`（**置空**即恢复「每次必须显式指定 `--server`」）；

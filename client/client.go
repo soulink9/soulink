@@ -43,7 +43,7 @@ const (
 
 // errUnauthorized 表示 hub 拒绝了凭据（401）。
 // 重试不会改变结果，Run 遇此错误直接退出。
-var errUnauthorized = errors.New("unauthorized: token 无效或已吊销（检查 `soulink login` 或 --token）")
+var errUnauthorized = errors.New("unauthorized: token 无效或已吊销（检查 `soulink config set token` 或 --token）")
 
 // Run 维持隧道长连接：断线后指数退避重连，直到 ctx 取消。
 // target 解析失败、认证被拒（401）属配置错误，立即返回不重试。
