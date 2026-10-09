@@ -36,7 +36,7 @@ dist: clean build-all ## 六平台归档 + checksums → dist/（unix tar.gz / w
 		os=$${p%/*}; arch=$${p#*/}; \
 		ext=""; [ "$$os" = "windows" ] && ext=".exe"; \
 		bin="$(BINARY)-$$os-$$arch$$ext"; \
-		pkg="$(BINARY)_$(VERSION)_$$os_$$arch"; \
+		pkg="$(BINARY)_$(VERSION)_$${os}_$${arch}"; \
 		if [ "$$os" = "windows" ]; then \
 			zip -q -j "$(DIST_DIR)/$$pkg.zip" "$(DIST_DIR)/$$bin" README.md || exit 1; \
 		else \
