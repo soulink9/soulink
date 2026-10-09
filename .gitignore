@@ -1,3 +1,5 @@
 /soulink
 bin/
 .DS_Store
+# make dist 的六平台产物
+/dist/

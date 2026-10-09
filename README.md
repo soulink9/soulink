@@ -5,10 +5,11 @@ soulink 客户端：一条命令把本地 Web 服务（含 WebSocket）分享出
 
 ## 安装
 
-从 Releases 下载对应平台二进制，或自行构建：
+从 Releases 下载对应平台归档，或自行构建：
 
 ```bash
-go install github.com/soulink/soulink-local/cmd/soulink@latest
+make build   # 本机平台 → bin/soulink
+make dist    # 六平台归档 + checksums → dist/
 ```
 
 ## 用法
@@ -41,7 +42,7 @@ shell 自动补全：`soulink completion bash|zsh|fish|powershell`（按命令�
 
 > 内置默认地址是「官方部署」身份的一部分，与内置 guest token 成对。覆盖方式：
 > 手工构建用 `-ldflags "-X main.defaultServer=https://your-hub"`（**置空**即恢复「每次必须显式指定 `--server`」）；
-> 走 GoReleaser 则设环境变量 `SOULINK_DEFAULT_SERVER=https://your-hub`，不设即沿用源码内置值，无需改发布配置。
+> 经 Makefile 出包则设环境变量 `SOULINK_DEFAULT_SERVER=https://your-hub`，不设即沿用源码内置值，无需改发布配置。
 
 断线自动重连（指数退避），重连后尽量保持原子域名。
 
