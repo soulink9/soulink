@@ -37,8 +37,8 @@ func newHTTPCmd(root *cobra.Command) (*cobra.Command, func(cmd *cobra.Command, a
   https://www.example.com   HTTPS 目标（缺省端口 443，TLS 拨号）
 
 注意：guest 隧道只能指向 127.0.0.1 / localhost；注册用户可指向任意 IP 或域名。
-本地服务若因 Host 白名单拒绝请求（如「Host 不被允许」），加 --rewrite-host
-把 Host 头改写为目标地址。
+本地服务若因 Host/Origin 白名单拒绝请求（如「Host 不被允许」「Origin 不被允许」），
+加 --rewrite-host 把 Host 头改写为目标地址，并删除 Origin 与 Referer 头。
 
 参数优先级：--server/--token flag > SOULINK_SERVER/SOULINK_TOKEN 环境变量 >
 ~/.soulink/config.yaml（soulink config set 写入）> 内置默认。`,
@@ -49,7 +49,7 @@ func newHTTPCmd(root *cobra.Command) (*cobra.Command, func(cmd *cobra.Command, a
 	cmd.Flags().StringVar(&opts.Token, "token", "", "access token (default: env/config file, else guest)")
 	cmd.Flags().StringVar(&opts.Subdomain, "subdomain", "", "requested subdomain (registered users only)")
 	cmd.Flags().BoolVar(&opts.Insecure, "insecure", false, "skip TLS verification for wss")
-	cmd.Flags().BoolVar(&opts.RewriteHost, "rewrite-host", false, "rewrite Host header to the target address (for local services rejecting public Host)")
+	cmd.Flags().BoolVar(&opts.RewriteHost, "rewrite-host", false, "rewrite Host header to the target address and strip Origin/Referer (for local services rejecting public Host/Origin)")
 	root.Flags().AddFlagSet(cmd.Flags())
 	return cmd, run
 }

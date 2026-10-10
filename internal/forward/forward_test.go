@@ -23,12 +23,15 @@ func serve(t *testing.T, target Target, rewriteHost bool) net.Conn {
 	return mine
 }
 
-// TestHandleRewriteHost 校验 rewrite 模式：Host 改写为目标地址，path/query 与 body 原样透传。
+// TestHandleRewriteHost 校验 rewrite 模式：Host 改写为目标地址，Origin 与
+// Referer 被剥离，path/query 与 body 原样透传。
 func TestHandleRewriteHost(t *testing.T) {
-	var gotHost, gotURI, gotBody string
+	var gotHost, gotURI, gotBody, gotOrigin, gotReferer string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotHost = r.Host
 		gotURI = r.URL.RequestURI()
+		gotOrigin = r.Header.Get("Origin")
+		gotReferer = r.Header.Get("Referer")
 		b, _ := io.ReadAll(r.Body)
 		gotBody = string(b)
 		fmt.Fprintln(w, "ok")
@@ -37,7 +40,7 @@ func TestHandleRewriteHost(t *testing.T) {
 	addr := strings.TrimPrefix(srv.URL, "http://")
 
 	mine := serve(t, Target{Addr: addr}, true)
-	fmt.Fprintf(mine, "POST /api?q=1 HTTP/1.1\r\nHost: abc123.apps.soulink.cam\r\nContent-Length: 4\r\n\r\nbody")
+	fmt.Fprintf(mine, "POST /api?q=1 HTTP/1.1\r\nHost: abc123.apps.soulink.cam\r\nOrigin: https://abc123.apps.soulink.cam\r\nReferer: https://abc123.apps.soulink.cam/\r\nContent-Length: 4\r\n\r\nbody")
 
 	resp, err := http.ReadResponse(bufio.NewReader(mine), nil)
 	if err != nil {
@@ -57,20 +60,27 @@ func TestHandleRewriteHost(t *testing.T) {
 	if gotBody != "body" {
 		t.Errorf("body = %q, want body", gotBody)
 	}
+	if gotOrigin != "" {
+		t.Errorf("Origin = %q, want 已剥离", gotOrigin)
+	}
+	if gotReferer != "" {
+		t.Errorf("Referer = %q, want 已剥离", gotReferer)
+	}
 }
 
-// TestHandleRawKeepsHost 校验默认透传模式：Host 原样转发（字节流不解析）。
+// TestHandleRawKeepsHost 校验默认透传模式：Host/Origin 原样转发（字节流不解析）。
 func TestHandleRawKeepsHost(t *testing.T) {
-	var gotHost string
+	var gotHost, gotOrigin string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotHost = r.Host
+		gotOrigin = r.Header.Get("Origin")
 		fmt.Fprintln(w, "ok")
 	}))
 	defer srv.Close()
 	addr := strings.TrimPrefix(srv.URL, "http://")
 
 	mine := serve(t, Target{Addr: addr}, false)
-	fmt.Fprintf(mine, "GET / HTTP/1.1\r\nHost: abc123.apps.soulink.cam\r\n\r\n")
+	fmt.Fprintf(mine, "GET / HTTP/1.1\r\nHost: abc123.apps.soulink.cam\r\nOrigin: https://abc123.apps.soulink.cam\r\n\r\n")
 
 	resp, err := http.ReadResponse(bufio.NewReader(mine), nil)
 	if err != nil {
@@ -79,6 +89,9 @@ func TestHandleRawKeepsHost(t *testing.T) {
 	resp.Body.Close()
 	if gotHost != "abc123.apps.soulink.cam" {
 		t.Errorf("Host = %q, want 原样透传公网域名", gotHost)
+	}
+	if gotOrigin != "https://abc123.apps.soulink.cam" {
+		t.Errorf("Origin = %q, want 原样透传", gotOrigin)
 	}
 }
 

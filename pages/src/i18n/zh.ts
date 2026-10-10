@@ -59,8 +59,8 @@ const zh = {
         a: 'guest 隧道不注册不登录：随机域名（<code>xxx.apps.soulink.cam</code>）、4 小时回收、全站共享并发与限速、每条隧道日流量 200 MB。适合临时演示与调试；需要固定域名和更高配额就注册账号（见上方等级表）。',
       },
       {
-        q: '访问时报「Host 不被允许（只允许回环地址）」之类的 403？',
-        a: '这是你本地服务自己的 Host 头白名单：隧道把访客的 Host（公网域名）原样转发给了本地服务，而它只接受 localhost / 127.0.0.1。两种解法：在本地服务设置里放行你的隧道域名；或开隧道时加 <code>--rewrite-host</code>，把 Host 改写成目标地址（如 <code>127.0.0.1:3000</code>）再转发：<code>soulink 3000 --rewrite-host</code>。',
+        q: '访问时报「Host 不被允许」「Origin 不被允许」之类的 403？',
+        a: '这是你本地服务自己的请求头白名单：隧道把访客的 Host、Origin（公网域名）原样转发给了本地服务，而它只认回环地址。注意：Vite 等工具构建的页面用 <code>&lt;script type="module"&gt;</code> 加载 JS，浏览器对这类请求强制带 Origin——典型症状就是页面能开但 JS/CSS 全 403。两种解法：在本地服务设置里放行你的隧道域名；或开隧道时加 <code>--rewrite-host</code>，把 Host 改写成目标地址（如 <code>127.0.0.1:3000</code>）并删除 Origin/Referer：<code>soulink 3000 --rewrite-host</code>。隧道下页面与资源同源，不依赖这两个头。',
       },
       {
         q: '支持 WebSocket 吗？',

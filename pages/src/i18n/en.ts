@@ -61,8 +61,8 @@ const en: typeof zh = {
         a: 'Guest tunnels need no account: random domain (<code>xxx.apps.soulink.cam</code>), reclaimed after 4 hours, site-wide shared concurrency and bandwidth, 200 MB/day per tunnel. Great for quick demos; register for fixed domains and higher quotas (see the tier table above).',
       },
       {
-        q: 'Getting a 403 like "Host not allowed (loopback only)"?',
-        a: 'That is your local service enforcing a Host header allowlist: the tunnel forwards the visitor\'s Host (the public domain) unchanged, and the service only accepts localhost / 127.0.0.1. Either allowlist your tunnel domain in the service settings, or start the tunnel with <code>--rewrite-host</code> to rewrite Host to the target address (e.g. <code>127.0.0.1:3000</code>): <code>soulink 3000 --rewrite-host</code>.',
+        q: 'Getting a 403 like "Host not allowed" or "Origin not allowed"?',
+        a: 'That is your local service enforcing a Host/Origin allowlist: the tunnel forwards the visitor\'s Host and Origin (the public domain) unchanged. Note: pages built by Vite & co. load JS via <code>&lt;script type="module"&gt;</code>, and browsers always send an Origin header on those requests — the classic symptom is the HTML loads but every JS/CSS file 403s. Either allowlist your tunnel domain in the service settings, or start the tunnel with <code>--rewrite-host</code>, which rewrites Host to the target address (e.g. <code>127.0.0.1:3000</code>) and strips Origin/Referer: <code>soulink 3000 --rewrite-host</code>. Over the tunnel the page and its assets are same-origin, so neither header is needed.',
       },
       {
         q: 'Does it support WebSocket?',

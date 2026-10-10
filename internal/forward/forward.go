@@ -1,8 +1,9 @@
 // Package forward 把隧道 stream 转发到本地目标端口。
 //
 // 默认是原始 HTTP/1.1 字节流透传，不做任何协议解析，WebSocket 升级流量
-// 天然透明。rewriteHost 模式逐请求解析 HTTP 头并改写 Host（解决本地服务
-// 只接受回环 Host 的白名单校验），WebSocket 升级请求转发后恢复透传。
+// 天然透明。rewriteHost 模式逐请求解析 HTTP 头并改写 Host、删除 Origin 和
+// Referer（解决本地服务对 Host/Origin 的白名单校验，同时避免 Referer 泄露
+// 公网域名），WebSocket 升级请求转发后恢复透传。
 package forward
 
 import (
@@ -80,7 +81,9 @@ func bridge(lc, stream net.Conn) {
 	<-done
 }
 
-// bridgeRewriteHost 请求方向逐请求改写 Host 为目标地址；响应方向始终透传。
+// bridgeRewriteHost 请求方向逐请求改写 Host 为目标地址，并删除 Origin 与
+// Referer（浏览器子资源请求必带 Origin，本地服务若校验它会 403；隧道场景下
+// 页面与资源同源，CORS 不依赖这两个头）。响应方向始终透传。
 // hub 每条 stream 只发一个请求（DisableKeepAlives），循环写法对将来的
 // keep-alive 同样安全；Upgrade 请求（WebSocket）转发后恢复字节流透传。
 func bridgeRewriteHost(lc, stream net.Conn, targetAddr string) {
@@ -99,6 +102,8 @@ func bridgeRewriteHost(lc, stream net.Conn, targetAddr string) {
 			}
 			req.RequestURI = "" // Request.Write 要求客户端语义，清空后由 URL 重建 origin-form
 			req.Host = targetAddr
+			req.Header.Del("Origin")
+			req.Header.Del("Referer")
 			if err := req.Write(lc); err != nil {
 				return
 			}

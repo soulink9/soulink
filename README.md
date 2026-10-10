@@ -54,7 +54,8 @@ soulink http 3000
 # 分享局域网内其他机器
 soulink http 192.168.1.10:8080
 
-# 本地服务只接受回环 Host（报「Host 不被允许」之类 403）时
+# 本地服务校验 Host/Origin 白名单（报「Host 不被允许」「Origin 不被允许」之类 403）时，
+# 改写 Host 为目标地址并删除 Origin/Referer（隧道下同源访问不依赖这两个头）
 soulink http 3000 --rewrite-host
 ```
 
