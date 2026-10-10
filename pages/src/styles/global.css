@@ -107,7 +107,7 @@ a:hover { text-decoration: underline; }
 :root[data-theme="light"] .icon-moon { display: none; }
 
 /* ---- hero ---- */
-.hero { padding: 96px 0 72px; text-align: center; }
+.hero { padding: 56px 0 24px; text-align: center; }
 .badge {
   display: inline-block;
   border: 1px solid var(--border);
@@ -118,9 +118,9 @@ a:hover { text-decoration: underline; }
   margin: 0 0 20px;
 }
 .hero h1 {
-  font-size: clamp(32px, 5.5vw, 56px);
+  font-size: clamp(32px, 5.5vw, 52px);
   line-height: 1.2;
-  margin: 0 0 16px;
+  margin: 0 0 14px;
 }
 .grad {
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
@@ -130,25 +130,9 @@ a:hover { text-decoration: underline; }
 }
 .hero .sub {
   color: var(--muted);
-  font-size: 17px;
+  font-size: 16px;
   max-width: 620px;
-  margin: 0 auto 28px;
-}
-.cta { display: flex; gap: 12px; justify-content: center; margin-bottom: 44px; }
-.btn {
-  display: inline-block;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 22px;
-  color: var(--text);
-  font-weight: 600;
-  font-size: 15px;
-}
-.btn:hover { text-decoration: none; border-color: var(--accent); }
-.btn.primary {
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  border: none;
-  color: #fff;
+  margin: 0 auto;
 }
 
 /* ---- terminal ---- */
@@ -163,15 +147,34 @@ a:hover { text-decoration: underline; }
 }
 .term-bar {
   display: flex;
-  gap: 6px;
-  padding: 10px 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 8px 14px;
   border-bottom: 1px solid var(--border);
 }
-.term-bar i {
+.term-bar .dots { display: flex; gap: 6px; }
+.term-bar .dots i {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--border);
+}
+.term-copy {
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: #c7d2fe;
+  border-radius: 8px;
+  padding: 3px 12px;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.term-copy:hover { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+.term-copy.copied {
+  border-color: #4ade80;
+  color: #4ade80;
+  background: color-mix(in srgb, #4ade80 15%, transparent);
 }
 .term pre { margin: 0; padding: 18px 20px; }
 .term code, .code code {
@@ -179,11 +182,34 @@ a:hover { text-decoration: underline; }
   font-size: 14px;
   color: #d6deeb;
 }
+.term .prompt { color: #7f8aa3; }
 .ok { color: #4ade80; }
-.term-note { color: var(--muted); font-size: 13px; margin-top: 14px; }
+
+/* 字符从左上角逐一落下 */
+.char {
+  display: inline-block;
+  opacity: 0;
+  animation: char-in 0.4s cubic-bezier(0.2, 0.7, 0.3, 1.2) forwards;
+}
+@keyframes char-in {
+  from {
+    opacity: 0;
+    transform: translate(-5px, -10px) scale(1.2);
+    color: var(--accent-2);
+    text-shadow: 0 0 12px var(--accent-2);
+  }
+  60% { opacity: 1; }
+  to {
+    opacity: 1;
+    transform: none;
+    color: inherit;
+    text-shadow: none;
+  }
+}
 
 /* ---- sections ---- */
 .section { padding: 72px 0; }
+.section-first { padding-top: 24px; }
 .section h2 {
   font-size: 28px;
   margin: 0 0 24px;
@@ -191,6 +217,7 @@ a:hover { text-decoration: underline; }
 }
 .narrow h2 { text-align: left; }
 .narrow h3 { margin: 32px 0 8px; font-size: 18px; }
+.narrow > h3:first-child { margin-top: 0; }
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -217,7 +244,6 @@ a:hover { text-decoration: underline; }
 
 /* ---- OS 选项卡 ---- */
 .os-tabs { display: flex; gap: 8px; margin: 12px 0 14px; }
-.hero-tabs { justify-content: center; margin: 0 0 14px; }
 .os-tab {
   border: 1px solid var(--border);
   background: transparent;

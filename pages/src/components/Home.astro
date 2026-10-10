@@ -14,8 +14,8 @@ const { t } = Astro.props;
       <span>{t.nav.brand}</span>
     </a>
     <nav>
-      <a href="#features">{t.nav.features}</a>
       <a href="#quickstart">{t.nav.quickstart}</a>
+      <a href="#features">{t.nav.features}</a>
       <a href="#tiers">{t.nav.tiers}</a>
       <a href="#faq">{t.nav.faq}</a>
       <a href="https://github.com/soulink9/soulink" target="_blank" rel="noopener">{t.nav.github}</a>
@@ -31,66 +31,47 @@ const { t } = Astro.props;
 <main>
   <section class="hero">
     <div class="container">
-      <p class="badge">{t.hero.badge}</p>
       <h1>{t.hero.titleA}<br /><span class="grad">{t.hero.titleB}</span></h1>
       <p class="sub">{t.hero.sub}</p>
-      <div class="cta">
-        <a class="btn primary" href="#quickstart">{t.hero.ctaStart}</a>
-        <a class="btn" href="https://github.com/soulink9/soulink" target="_blank" rel="noopener">{t.hero.ctaGithub}</a>
-      </div>
-      <div class="os-tabs hero-tabs">
-        <button class="os-tab" data-os="macos" type="button">macOS</button>
-        <button class="os-tab" data-os="linux" type="button">Linux</button>
-        <button class="os-tab" data-os="windows" type="button">Windows</button>
-      </div>
-      <div class="term">
-        <div class="term-bar"><i></i><i></i><i></i></div>
-        <pre><code><span data-install-comment data-unix={t.hero.termComment1} data-win={t.hero.termComment1Win}>{t.hero.termComment1}</span>
-<span data-install-prompt>$</span> <span data-install-cmd data-unix="curl -fsSL https://www.soulink.cam/install.sh | sh" data-win="irm https://www.soulink.cam/install.ps1 | iex">curl -fsSL https://www.soulink.cam/install.sh | sh</span>
-
-{t.hero.termComment2}
-$ soulink 3000
-<span class="ok">→ https://fresh-otter-42.apps.soulink.cam</span></code></pre>
-      </div>
-      <p class="term-note">{t.hero.termNote}</p>
     </div>
   </section>
 
-  <section id="features" class="section">
-    <div class="container">
-      <h2>{t.features.title}</h2>
-      <div class="grid">
-        {t.features.items.map((f) => (
-          <div class="card">
-            <h3>{f.t}</h3>
-            <p>{f.d}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <section id="quickstart" class="section">
+  <section id="quickstart" class="section section-first">
     <div class="container narrow">
-      <h2>{t.quickstart.title}</h2>
-
       <h3>{t.quickstart.s1t}</h3>
-      <p>{t.quickstart.s1d}</p>
       <div class="os-tabs">
         <button class="os-tab" data-os="macos" type="button">macOS</button>
         <button class="os-tab" data-os="linux" type="button">Linux</button>
         <button class="os-tab" data-os="windows" type="button">Windows</button>
       </div>
       <div class="os-panel" data-os-panel="macos">
-        <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | sh</code></pre>
+        <div class="term">
+          <div class="term-bar">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <button class="term-copy" data-copy type="button" data-label={t.quickstart.copy} data-copied={t.quickstart.copied}>{t.quickstart.copy}</button>
+          </div>
+          <pre><code><span class="prompt">$</span> <span data-cmd>curl -fsSL https://www.soulink.cam/install.sh | sh</span></code></pre>
+        </div>
         <p class="muted small mirror-hint">{t.quickstart.s1note} <code>SOULINK_GITHUB_MIRROR=gh-proxy.com</code></p>
       </div>
       <div class="os-panel" data-os-panel="linux">
-        <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | sh</code></pre>
+        <div class="term">
+          <div class="term-bar">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <button class="term-copy" data-copy type="button" data-label={t.quickstart.copy} data-copied={t.quickstart.copied}>{t.quickstart.copy}</button>
+          </div>
+          <pre><code><span class="prompt">$</span> <span data-cmd>curl -fsSL https://www.soulink.cam/install.sh | sh</span></code></pre>
+        </div>
         <p class="muted small mirror-hint">{t.quickstart.s1note} <code>SOULINK_GITHUB_MIRROR=gh-proxy.com</code></p>
       </div>
       <div class="os-panel" data-os-panel="windows">
-        <pre class="code"><code>irm https://www.soulink.cam/install.ps1 | iex</code></pre>
+        <div class="term">
+          <div class="term-bar">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <button class="term-copy" data-copy type="button" data-label={t.quickstart.copy} data-copied={t.quickstart.copied}>{t.quickstart.copy}</button>
+          </div>
+          <pre><code><span class="prompt">PS&gt;</span> <span data-cmd>irm https://www.soulink.cam/install.ps1 | iex</span></code></pre>
+        </div>
         <p class="muted small mirror-hint">{t.quickstart.s1note} <code>$env:SOULINK_GITHUB_MIRROR='gh-proxy.com'</code></p>
         <p class="muted">{t.quickstart.winZip}</p>
       </div>
@@ -105,6 +86,20 @@ $ soulink 3000
       <pre class="code"><code>soulink config set server https://hub.soulink.cam
 soulink config set token &lt;token&gt;
 soulink 3000 --subdomain myapp</code></pre>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <div class="container">
+      <h2>{t.features.title}</h2>
+      <div class="grid">
+        {t.features.items.map((f) => (
+          <div class="card">
+            <h3>{f.t}</h3>
+            <p>{f.d}</p>
+          </div>
+        ))}
+      </div>
     </div>
   </section>
 
@@ -159,25 +154,69 @@ soulink 3000 --subdomain myapp</code></pre>
     var ua = navigator.userAgent || '';
     var os = /Windows/i.test(ua) ? 'windows' : /Android|Linux/i.test(ua) ? 'linux' : 'macos';
 
-    // hero 与快速上手两处选项卡共享同一份 OS 选择状态
     var tabs = document.querySelectorAll('.os-tab');
     var panels = document.querySelectorAll('.os-panel');
-    var comment = document.querySelector('[data-install-comment]');
-    var prompt = document.querySelector('[data-install-prompt]');
-    var cmd = document.querySelector('[data-install-cmd]');
+
+    // 字符从左上角逐一落下。prefers-reduced-motion 用户跳过，保留纯文本。
+    var motionOK = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function dropChars(el) {
+      if (!motionOK || !el) return;
+      var text = el.textContent;
+      el.textContent = '';
+      var i = 0;
+      text.split('').forEach(function (ch) {
+        var s = document.createElement('span');
+        s.className = 'char';
+        s.style.animationDelay = (i++ * 18) + 'ms';
+        s.textContent = ch;
+        el.appendChild(s);
+      });
+    }
+    function dropPanelCmd(name) {
+      dropChars(document.querySelector('[data-os-panel="' + name + '"] [data-cmd]'));
+    }
 
     function select(name) {
       tabs.forEach(function (b) { b.classList.toggle('active', b.dataset.os === name); });
       panels.forEach(function (p) { p.hidden = p.dataset.osPanel !== name; });
-      if (comment && prompt && cmd) {
-        var win = name === 'windows';
-        comment.textContent = comment.getAttribute(win ? 'data-win' : 'data-unix');
-        prompt.textContent = win ? 'PS>' : '$';
-        cmd.textContent = cmd.getAttribute(win ? 'data-win' : 'data-unix');
-      }
     }
-    tabs.forEach(function (b) { b.addEventListener('click', function () { select(b.dataset.os); }); });
+    tabs.forEach(function (b) {
+      b.addEventListener('click', function () {
+        select(b.dataset.os);
+        dropPanelCmd(b.dataset.os); // 切换 OS 时安装命令重放落下动画
+      });
+    });
     select(os);
+    dropPanelCmd(os);
+
+    // 复制：所见即所得，只复制框内那条安装命令（不含提示符）
+    function legacyCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var cmd = btn.closest('.term').querySelector('[data-cmd]');
+        var text = cmd.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function () { legacyCopy(text); });
+        } else {
+          legacyCopy(text);
+        }
+        btn.textContent = btn.getAttribute('data-copied');
+        btn.classList.add('copied');
+        setTimeout(function () {
+          btn.textContent = btn.getAttribute('data-label');
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
 
     // 主题切换：缺省跟随系统，点击后在 localStorage 持久化显式选择
     var root = document.documentElement;
