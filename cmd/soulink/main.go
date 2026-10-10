@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 
 	"github.com/spf13/cobra"
 
@@ -19,12 +20,24 @@ const defaultGuestToken = "soulink-guest" // 与 hub 默认配置一致的公开
 // 必须带 scheme：client 对裸 host 补的是 ws://（明文），只有 https:// 才走 wss。
 var defaultServer = "https://hub.soulink.cam"
 
-// 版本信息由发布流程经 -ldflags 注入（version 必有，commit/date 在 GoReleaser 构建中注入）。
+// 版本信息由发布流程经 -ldflags 注入（make build/dist，三件套见 Makefile）。
 var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
 )
+
+// go install pkg@vX.Y.Z 安装的二进制没有 ldflags 注入，但 Go 会把模块版本
+// 打进 BuildInfo；用它兜底，让 go install 的产物也能显示真实版本号。
+// 本地 go build 的 Main.Version 是 "(devel)"，跳过。
+func init() {
+	if version != "dev" {
+		return
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		version = bi.Main.Version
+	}
+}
 
 // 环境变量覆盖层：优先级 flag > env > 配置文件 > 内置默认（见 resolveOne）。
 const (
