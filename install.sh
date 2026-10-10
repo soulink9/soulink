@@ -5,15 +5,20 @@
 # 先审计再执行：
 #   curl -fsSL https://www.soulink.cam/install.sh -o install.sh
 #   less install.sh && sh install.sh
+# 下载源顺序：SOULINK_GITHUB_MIRROR（显式指定）> github.com 直连 > 内置镜像
+# （gh-proxy.com、ghproxy.net）。国内网络直连超时属正常，脚本会自动回落镜像；
+# 无论走哪个源，包都对照 checksums.txt 做 sha256 强校验。
 # 环境变量：
 #   SOULINK_INSTALL_DIR    安装目录（默认 /usr/local/bin，不可写时用 sudo）
-#   SOULINK_VERSION        指定版本（默认 latest，跳过 GitHub API 查询）
-#   SOULINK_GITHUB_MIRROR  GitHub 镜像域名，供国内加速（如 ghfast.top，不带 https:// 前缀）
+#   SOULINK_VERSION        指定版本（默认自动解析 latest）
+#   SOULINK_GITHUB_MIRROR  显式指定镜像域名（如 gh-proxy.com，不带 https:// 前缀）
 set -eu
 
+REPO="soulink9/soulink"
+BIN="soulink"
+BUILTIN_MIRRORS="gh-proxy.com ghproxy.net"
+
 main() {
-  REPO="soulink9/soulink"
-  BIN="soulink"
   INSTALL_DIR="${SOULINK_INSTALL_DIR:-/usr/local/bin}"
   VERSION="${SOULINK_VERSION:-}"
 
@@ -22,7 +27,7 @@ main() {
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   case "$os" in
     darwin | linux) ;;
-    *) err "暂不支持 $os；Windows 请从 https://github.com/$REPO/releases 下载 zip" ;;
+    *) err "暂不支持 $os；Windows 请用 PowerShell：irm https://www.soulink.cam/install.ps1 | iex" ;;
   esac
 
   arch="$(uname -m)"
@@ -32,36 +37,39 @@ main() {
     *) err "不支持的架构：$arch" ;;
   esac
 
-  if [ -z "$VERSION" ]; then
-    release_json="$(curl -fsSL --connect-timeout 5 --max-time 20 \
-      "https://api.github.com/repos/$REPO/releases/latest")" ||
-      err "查询最新版本失败；可设 SOULINK_VERSION=vX.Y.Z 跳过 GitHub API"
-    VERSION="$(printf '%s' "$release_json" |
-      sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-    [ -n "$VERSION" ] || err "解析最新版本号失败"
-  fi
-
+  [ -n "$VERSION" ] || VERSION="$(resolve_version)"
   pkg="${BIN}_${VERSION}_${os}_${arch}.tar.gz"
-  mirror="$(printf '%s' "${SOULINK_GITHUB_MIRROR:-}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-  mirror="${mirror#https://}"
-  mirror="${mirror#http://}"
-  mirror="${mirror%/}"
-  if [ -n "$mirror" ]; then
-    printf '提示：经由第三方镜像 "%s" 下载（完整性由 sha256 校验）\n' "$mirror" >&2
-    base="https://${mirror}/github.com/$REPO/releases/download/$VERSION"
-  else
-    base="https://github.com/$REPO/releases/download/$VERSION"
-  fi
+
+  # 候选下载源：显式镜像 > 直连 > 内置镜像
+  set --
+  mirror="$(normalize_mirror "${SOULINK_GITHUB_MIRROR:-}")"
+  [ -z "$mirror" ] || set -- "$@" "https://$mirror/github.com/$REPO/releases/download/$VERSION"
+  set -- "$@" "https://github.com/$REPO/releases/download/$VERSION"
+  for m in $BUILTIN_MIRRORS; do
+    set -- "$@" "https://$m/github.com/$REPO/releases/download/$VERSION"
+  done
 
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' INT TERM EXIT
 
   printf '下载 soulink %s (%s/%s)...\n' "$VERSION" "$os" "$arch"
-  curl -fL --progress-bar --connect-timeout 5 --speed-limit 1024 --speed-time 30 \
-    -o "$tmp/$pkg" "$base/$pkg" ||
-    err "下载失败：$base/$pkg（国内网络可设 SOULINK_GITHUB_MIRROR=gh-proxy.com 走镜像加速）"
+  base=""
+  for candidate do
+    if curl -fL --progress-bar --connect-timeout 5 --speed-limit 1024 --speed-time 30 \
+      -o "$tmp/$pkg" "$candidate/$pkg"; then
+      base="$candidate"
+      break
+    fi
+    printf '提示：%s 不可达，尝试下一个源\n' "$candidate" >&2
+  done
+  [ -n "$base" ] || err "所有下载源均失败；可设 SOULINK_GITHUB_MIRROR=<镜像域名> 后重试"
+  case "$base" in
+    https://github.com/*) ;;
+    *) printf '提示：经由第三方镜像 "%s" 下载（完整性由 sha256 校验）\n' "$base" >&2 ;;
+  esac
+
   curl -fsSL --connect-timeout 5 --max-time 15 -o "$tmp/checksums.txt" "$base/checksums.txt" ||
-    err "checksums.txt 下载失败"
+    err "checksums.txt 下载失败（$base）"
 
   want="$(awk -v a="$pkg" '$2 == a {print tolower($1)}' "$tmp/checksums.txt")"
   [ -n "$want" ] || err "checksums.txt 中找不到 $pkg"
@@ -74,6 +82,34 @@ main() {
   printf '已安装 soulink %s -> %s\n' "$VERSION" "$INSTALL_DIR/$BIN"
   path_notice "$BIN" "$INSTALL_DIR"
   printf '\n直接使用（匿名、免注册）：\n  soulink 3000\n\n固定域名：到 https://hub.soulink.cam 注册后执行\n  soulink config set token <token>\n'
+}
+
+# 解析最新版本号：先试 GitHub API（国内通常可达），再试内置镜像的
+# /releases/latest 重定向；都失败则提示显式指定 SOULINK_VERSION。
+resolve_version() {
+  json="$(curl -fsSL --connect-timeout 5 --max-time 20 \
+    "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null)" || json=""
+  if [ -n "$json" ]; then
+    v="$(printf '%s' "$json" |
+      sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+    [ -z "$v" ] || { printf '%s' "$v"; return; }
+  fi
+  for m in $BUILTIN_MIRRORS; do
+    v="$(curl -fsSI --connect-timeout 5 --max-time 15 \
+      "https://$m/https://github.com/$REPO/releases/latest" 2>/dev/null |
+      tr -d '\r' | sed -n 's|^[Ll]ocation:.*/tag/\([^[:space:]]*\).*|\1|p' | head -n1)"
+    [ -z "$v" ] || { printf '%s' "$v"; return; }
+  done
+  err "无法解析最新版本；可设 SOULINK_VERSION=vX.Y.Z 后重试"
+}
+
+normalize_mirror() {
+  m="$(printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+  m="${m#https://}"
+  m="${m#http://}"
+  m="${m%/}"
+  case "$m" in *[[:space:]]*) err "SOULINK_GITHUB_MIRROR 含有空格：'$m'" ;; esac
+  printf '%s' "$m"
 }
 
 # 安装二进制（0755）；目录不可写时用 sudo 提权。

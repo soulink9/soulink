@@ -67,8 +67,7 @@ $ soulink 3000
       <h3>{t.quickstart.s1t}</h3>
       <p>{t.quickstart.s1d}</p>
       <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | sh</code></pre>
-      <p class="muted">{t.quickstart.s1note}</p>
-      <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | SOULINK_GITHUB_MIRROR=gh-proxy.com sh</code></pre>
+      <p class="muted small">{t.quickstart.s1note}</p>
 
       <h3>{t.quickstart.s2t}</h3>
       <p>{t.quickstart.s2d}</p>
@@ -81,7 +80,9 @@ $ soulink 3000
 soulink config set token &lt;token&gt;
 soulink 3000 --subdomain myapp</code></pre>
 
-      <p class="muted">{t.quickstart.windows}</p>
+      <p>{t.quickstart.winD}</p>
+      <pre class="code"><code>irm https://www.soulink.cam/install.ps1 | iex</code></pre>
+      <p class="muted">{t.quickstart.winZip}</p>
     </div>
   </section>
 

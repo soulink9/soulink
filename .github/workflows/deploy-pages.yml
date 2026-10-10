@@ -6,6 +6,7 @@ on:
     paths:
       - 'pages/**'
       - 'install.sh'
+      - 'install.ps1'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -31,8 +32,8 @@ jobs:
         working-directory: pages
       - run: npm run build
         working-directory: pages
-      # install.sh 的权威源在仓库根目录，拷进站点产物（www.soulink.cam/install.sh）
-      - run: cp install.sh pages/dist/install.sh
+      # install.sh / install.ps1 的权威源在仓库根目录，拷进站点产物
+      - run: cp install.sh install.ps1 pages/dist/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: pages/dist

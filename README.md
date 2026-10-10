@@ -16,13 +16,16 @@ curl -fsSL https://www.soulink.cam/install.sh | sh
 soulink 3000   # → https://<随机名>.apps.soulink.cam
 ```
 
-国内网络可用镜像加速下载：
+国内网络无需手动处理：脚本直连失败会自动回落内置镜像（gh-proxy.com、ghproxy.net），
+下载全程 sha256 强校验；也可用 `SOULINK_GITHUB_MIRROR=<镜像域名>` 显式指定。
 
-```bash
-curl -fsSL https://www.soulink.cam/install.sh | SOULINK_GITHUB_MIRROR=gh-proxy.com sh
+Windows（PowerShell 5.1+）一条命令：
+
+```powershell
+irm https://www.soulink.cam/install.ps1 | iex
 ```
 
-Windows：从 [Releases](https://github.com/soulink9/soulink/releases) 下载 zip 解压即用。
+也可以从 [Releases](https://github.com/soulink9/soulink/releases) 下载 zip 解压即用。
 
 其他方式：`go install github.com/soulink9/soulink/cmd/soulink@latest`，或自行构建：
 
