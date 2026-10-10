@@ -9,7 +9,7 @@ const en: typeof zh = {
     title: 'soulink — Share local services with one command',
     desc: 'soulink is an open-source tunneling tool: one command to install, one command to expose a local port as a public HTTPS URL. Anonymous by default, register for a fixed subdomain.',
   },
-  nav: { features: 'Features', quickstart: 'Quickstart', tiers: 'Tiers', github: 'GitHub' },
+  nav: { features: 'Features', quickstart: 'Quickstart', tiers: 'Tiers', github: 'GitHub', theme: 'Toggle theme' },
   hero: {
     badge: 'Open source · MIT · No sign-up',
     titleA: 'One command to',

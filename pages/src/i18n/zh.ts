@@ -7,7 +7,7 @@ const zh = {
     title: 'soulink — 一条命令，把本地服务分享给世界',
     desc: 'soulink 是开源的内网穿透工具：一条命令安装，一条命令把本地端口暴露为公网 HTTPS 地址。免注册匿名即用，注册可绑定固定域名。',
   },
-  nav: { features: '特性', quickstart: '快速上手', tiers: '等级', github: 'GitHub' },
+  nav: { features: '特性', quickstart: '快速上手', tiers: '等级', github: 'GitHub', theme: '切换主题' },
   hero: {
     badge: '开源 · MIT · 免注册',
     titleA: '一条命令，',

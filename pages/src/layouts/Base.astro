@@ -20,6 +20,13 @@ const { lang, title, desc } = Astro.props;
     <meta property="og:description" content={desc} />
     <meta property="og:type" content="website" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script is:inline>
+      // 首帧前恢复用户主题选择，避免闪烁；未选择则跟随系统
+      try {
+        var th = localStorage.getItem('soulink-theme');
+        if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <slot />

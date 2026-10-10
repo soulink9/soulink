@@ -9,8 +9,9 @@
   --code-bg: #0e1118;
 }
 
+/* 亮色：系统偏好且未被显式覆盖，或显式选了 light */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="dark"]) {
     --bg: #f7f8fb;
     --panel: #ffffff;
     --text: #1a1d26;
@@ -18,6 +19,14 @@
     --border: #e2e6ee;
     --code-bg: #10131a;
   }
+}
+:root[data-theme="light"] {
+  --bg: #f7f8fb;
+  --panel: #ffffff;
+  --text: #1a1d26;
+  --muted: #5c6472;
+  --border: #e2e6ee;
+  --code-bg: #10131a;
 }
 
 * { box-sizing: border-box; }
@@ -73,6 +82,29 @@ a:hover { text-decoration: underline; }
   border-radius: 999px;
   padding: 2px 12px;
 }
+
+/* ---- 主题切换 ---- */
+.theme-toggle {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.theme-toggle:hover { color: var(--text); }
+.icon-sun { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .icon-sun { display: block; }
+  :root:not([data-theme="dark"]) .icon-moon { display: none; }
+}
+:root[data-theme="light"] .icon-sun { display: block; }
+:root[data-theme="light"] .icon-moon { display: none; }
 
 /* ---- hero ---- */
 .hero { padding: 96px 0 72px; text-align: center; }
