@@ -5,7 +5,7 @@
 soulink 客户端：一条命令把本地 Web 服务（含 WebSocket）分享出去。
 单二进制、无依赖，支持 linux / darwin / windows（amd64、arm64）。
 
-官网：https://www.soulink.cam（[English](https://www.soulink.cam/en/)）
+官网：<https://www.soulink.cam>（[English](https://www.soulink.cam/en/)）
 
 ## 安装
 
