@@ -185,6 +185,7 @@ a:hover { text-decoration: underline; }
 
 /* ---- OS 选项卡 ---- */
 .os-tabs { display: flex; gap: 8px; margin: 12px 0 14px; }
+.hero-tabs { justify-content: center; margin: 0 0 14px; }
 .os-tab {
   border: 1px solid var(--border);
   background: transparent;
