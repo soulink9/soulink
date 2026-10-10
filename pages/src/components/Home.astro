@@ -35,8 +35,8 @@ const { t } = Astro.props;
       </div>
       <div class="term">
         <div class="term-bar"><i></i><i></i><i></i></div>
-        <pre><code>{t.hero.termComment1}
-$ curl -fsSL https://www.soulink.cam/install.sh | sh
+        <pre><code><span data-install-comment data-win={t.hero.termComment1Win}>{t.hero.termComment1}</span>
+<span data-install-prompt>$</span> <span data-install-cmd>curl -fsSL https://www.soulink.cam/install.sh | sh</span>
 
 {t.hero.termComment2}
 $ soulink 3000
@@ -66,8 +66,24 @@ $ soulink 3000
 
       <h3>{t.quickstart.s1t}</h3>
       <p>{t.quickstart.s1d}</p>
-      <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | sh</code></pre>
-      <p class="muted small">{t.quickstart.s1note}</p>
+      <div class="os-tabs">
+        <button class="os-tab" data-os="macos" type="button">macOS</button>
+        <button class="os-tab" data-os="linux" type="button">Linux</button>
+        <button class="os-tab" data-os="windows" type="button">Windows</button>
+      </div>
+      <div class="os-panel" data-os-panel="macos">
+        <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | sh</code></pre>
+        <p class="muted small mirror-hint">{t.quickstart.s1note} <code>SOULINK_GITHUB_MIRROR=gh-proxy.com</code></p>
+      </div>
+      <div class="os-panel" data-os-panel="linux">
+        <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | sh</code></pre>
+        <p class="muted small mirror-hint">{t.quickstart.s1note} <code>SOULINK_GITHUB_MIRROR=gh-proxy.com</code></p>
+      </div>
+      <div class="os-panel" data-os-panel="windows">
+        <pre class="code"><code>irm https://www.soulink.cam/install.ps1 | iex</code></pre>
+        <p class="muted small mirror-hint">{t.quickstart.s1note} <code>$env:SOULINK_GITHUB_MIRROR='gh-proxy.com'</code></p>
+        <p class="muted">{t.quickstart.winZip}</p>
+      </div>
 
       <h3>{t.quickstart.s2t}</h3>
       <p>{t.quickstart.s2d}</p>
@@ -75,14 +91,10 @@ $ soulink 3000
 <span class="ok">→ https://fresh-otter-42.apps.soulink.cam</span></code></pre>
 
       <h3>{t.quickstart.s3t}</h3>
-      <p>{t.quickstart.s3d}</p>
+      <p class="muted">{t.quickstart.s3d}</p>
       <pre class="code"><code>soulink config set server https://hub.soulink.cam
 soulink config set token &lt;token&gt;
 soulink 3000 --subdomain myapp</code></pre>
-
-      <p>{t.quickstart.winD}</p>
-      <pre class="code"><code>irm https://www.soulink.cam/install.ps1 | iex</code></pre>
-      <p class="muted">{t.quickstart.winZip}</p>
     </div>
   </section>
 
@@ -119,3 +131,32 @@ soulink 3000 --subdomain myapp</code></pre>
     <p class="muted small">© 2026 soulink</p>
   </div>
 </footer>
+
+<script is:inline>
+  (function () {
+    var ua = navigator.userAgent || '';
+    var os = /Windows/i.test(ua) ? 'windows' : /Android|Linux/i.test(ua) ? 'linux' : 'macos';
+
+    // 安装选项卡：按浏览器 OS 预选，可手动切换
+    var tabs = document.querySelectorAll('.os-tab');
+    var panels = document.querySelectorAll('.os-panel');
+    function select(name) {
+      tabs.forEach(function (b) { b.classList.toggle('active', b.dataset.os === name); });
+      panels.forEach(function (p) { p.hidden = p.dataset.osPanel !== name; });
+    }
+    tabs.forEach(function (b) { b.addEventListener('click', function () { select(b.dataset.os); }); });
+    select(os);
+
+    // hero 终端：Windows 访客直接看到 PowerShell 命令
+    if (os === 'windows') {
+      var c = document.querySelector('[data-install-comment]');
+      var p = document.querySelector('[data-install-prompt]');
+      var m = document.querySelector('[data-install-cmd]');
+      if (c && p && m) {
+        c.textContent = c.getAttribute('data-win');
+        p.textContent = 'PS>';
+        m.textContent = 'irm https://www.soulink.cam/install.ps1 | iex';
+      }
+    }
+  })();
+</script>

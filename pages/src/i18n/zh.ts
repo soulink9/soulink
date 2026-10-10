@@ -16,6 +16,7 @@ const zh = {
     ctaStart: '快速上手',
     ctaGithub: 'GitHub',
     termComment1: '# 安装（macOS / Linux）',
+    termComment1Win: '# 安装（Windows PowerShell）',
     termComment2: '# 把本地 3000 端口暴露到公网',
     termNote: '匿名即用 · 随机域名 · 有时效限制',
   },
@@ -33,13 +34,12 @@ const zh = {
   quickstart: {
     title: '快速上手',
     s1t: '1. 安装',
-    s1d: '一条命令安装（macOS / Linux）：',
-    s1note: '脚本会自动尝试镜像加速；也可用 SOULINK_GITHUB_MIRROR=<镜像域名> 显式指定。',
+    s1d: '一条命令安装：',
+    s1note: '脚本会自动尝试镜像加速；下载慢也可显式指定镜像：',
     s2t: '2. 开隧道（匿名，免注册）',
     s2d: '把本地 3000 端口暴露到公网，自动分配随机域名：',
     s3t: '3. 绑定固定域名（可选）',
     s3d: '到 hub 注册账号并复制 token，配置后即可使用固定子域名：',
-    winD: 'Windows（PowerShell 5.1+）一条命令：',
     winZip: '也可以从 Releases 下载 zip 解压即用。',
   },
   tiers: {

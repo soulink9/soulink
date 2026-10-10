@@ -183,6 +183,35 @@ a:hover { text-decoration: underline; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 
+/* ---- OS 选项卡 ---- */
+.os-tabs { display: flex; gap: 8px; margin: 12px 0 14px; }
+.os-tab {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.os-tab:hover { color: var(--text); }
+.os-tab.active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.os-panel[hidden] { display: none; }
+.os-panel .code { margin-top: 0; }
+.mirror-hint code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
 /* ---- table ---- */
 .table-wrap { overflow-x: auto; }
 table {

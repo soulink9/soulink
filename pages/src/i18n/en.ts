@@ -18,6 +18,7 @@ const en: typeof zh = {
     ctaStart: 'Quickstart',
     ctaGithub: 'GitHub',
     termComment1: '# install (macOS / Linux)',
+    termComment1Win: '# install (Windows PowerShell)',
     termComment2: '# expose local port 3000',
     termNote: 'Anonymous · random subdomain · time-limited',
   },
@@ -35,13 +36,12 @@ const en: typeof zh = {
   quickstart: {
     title: 'Quickstart',
     s1t: '1. Install',
-    s1d: 'One-command install (macOS / Linux):',
-    s1note: 'The installer falls back to mirrors automatically; set SOULINK_GITHUB_MIRROR=<host> to pin one.',
+    s1d: 'One-command install:',
+    s1note: 'The installer falls back to mirrors automatically; to pin one explicitly:',
     s2t: '2. Start a tunnel (anonymous)',
     s2d: 'Expose local port 3000 with a random subdomain:',
     s3t: '3. Claim a fixed subdomain (optional)',
     s3d: 'Register on the hub, copy your token, then configure the client:',
-    winD: 'Windows (PowerShell 5.1+), one command:',
     winZip: 'Or grab the zip from Releases and run it directly.',
   },
   tiers: {
