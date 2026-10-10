@@ -7,7 +7,7 @@ const en: typeof zh = {
   altLabel: '中文',
   meta: {
     title: 'Soulink — Share your AI sparks with friends in one command',
-    desc: 'Soulink is an open-source tunneling tool: one command to install, one command to expose a local port as a public HTTPS URL. Anonymous by default, register for a fixed subdomain.',
+    desc: 'Soulink is an open-source tunneling tool: one command to install, one command to share a local port with friends. Anonymous by default, register for a fixed domain.',
   },
   nav: { brand: 'Soulink', quickstart: 'Quickstart', features: 'Features', tiers: 'Tiers', faq: 'FAQ', github: 'GitHub', theme: 'Toggle theme' },
   hero: {
@@ -19,7 +19,7 @@ const en: typeof zh = {
     title: 'Features',
     items: [
       { t: 'Anonymous by default', d: 'No sign-up, no login. Run soulink 3000 and get a random public URL instantly.' },
-      { t: 'Fixed subdomains', d: 'Register to claim a durable subdomain like myapp.apps.soulink.cam.' },
+      { t: 'Fixed domains', d: 'Register to claim a fixed domain like myapp.apps.soulink.cam.' },
       { t: 'Single binary', d: 'Written in Go, zero dependencies. macOS / Linux / Windows, one-command install.' },
       { t: 'Quotas & rate limits', d: 'Per-account rate limiting and daily/monthly traffic quotas, with fair-share protection for anonymous tunnels.' },
       { t: 'Built-in support', d: 'Message the admin right from the console — no issue tracker detour.' },
@@ -32,20 +32,20 @@ const en: typeof zh = {
     copied: 'Copied ✓',
     s1note: 'The installer falls back to mirrors automatically; to pin one explicitly:',
     s2t: '2. Start a tunnel (anonymous)',
-    s2d: 'Expose local port 3000 with a random subdomain:',
-    s3t: '3. Claim a fixed subdomain (optional)',
-    s3d: 'Register on the hub, copy your token, then configure the client:',
+    s2d: 'Share local port 3000 with friends on a random domain:',
+    s3t: '3. Claim a fixed domain (optional)',
+    s3d: 'Register in the console, copy your token, then configure the client:',
     winZip: 'Or grab the zip from Releases and run it directly.',
   },
   tiers: {
     title: 'Tiers & quotas',
-    desc: 'Anonymous tunnels work out of the box; an account unlocks higher quotas and fixed subdomains.',
+    desc: 'Anonymous tunnels work out of the box; an account unlocks higher quotas and fixed domains.',
     cols: ['Tier', 'Subdomain', 'Concurrent tunnels', 'Bandwidth', 'Traffic quota'],
     rows: [
       ['guest (anon)', 'Random, reclaimed after 4h', 'Shared pool of 20', '256 KB/s shared', '200 MB/day per tunnel'],
-      ['free', 'Custom subdomain', '3 (random ≤ 2)', '512 KB/s', '100 MB/day · 1 GB/month'],
-      ['pro', '3 reserved subdomains', '10', '1 MB/s', '5 GB/day · 100 GB/month'],
-      ['max', '10 reserved subdomains', '50', '5 MB/s', '100 GB/day · 1 TB/month'],
+      ['free', 'Custom domain', '3 (random ≤ 2)', '512 KB/s', '100 MB/day · 1 GB/month'],
+      ['pro', '3 reserved domains', '10', '1 MB/s', '5 GB/day · 100 GB/month'],
+      ['max', '10 reserved domains', '50', '5 MB/s', '100 GB/day · 1 TB/month'],
     ],
     note: 'Quotas follow hub configuration; the above are the current defaults of soulink.cam.',
   },
@@ -54,11 +54,11 @@ const en: typeof zh = {
     items: [
       {
         q: 'How is soulink different from ngrok or frp?',
-        a: 'Open source (MIT) and anonymous by default: one install command, one command to get a public HTTPS URL — no account needed. Register to claim a fixed subdomain. Single-binary client for macOS / Linux / Windows.',
+        a: 'Open source (MIT) and anonymous by default: one install command, one command to get a public HTTPS URL — no account needed. Register to claim a fixed domain. Single-binary client for macOS / Linux / Windows.',
       },
       {
         q: 'What are the limits of anonymous usage?',
-        a: 'Guest tunnels need no account: random subdomain (<code>xxx.apps.soulink.cam</code>), reclaimed after 4 hours, site-wide shared concurrency and bandwidth, 200 MB/day per tunnel. Great for quick demos; register for fixed subdomains and higher quotas (see the tier table above).',
+        a: 'Guest tunnels need no account: random domain (<code>xxx.apps.soulink.cam</code>), reclaimed after 4 hours, site-wide shared concurrency and bandwidth, 200 MB/day per tunnel. Great for quick demos; register for fixed domains and higher quotas (see the tier table above).',
       },
       {
         q: 'Getting a 403 like "Host not allowed (loopback only)"?',
@@ -86,7 +86,7 @@ const en: typeof zh = {
       },
       {
         q: 'Does the domain stay valid?',
-        a: 'Guest random subdomains are reclaimed after 4 hours; custom subdomains of registered users are durable. The client reconnects automatically with exponential backoff and tries to keep the original subdomain.',
+        a: 'Guest random domains are reclaimed after 4 hours; custom domains of registered users are durable. The client reconnects automatically with exponential backoff and tries to keep the original domain.',
       },
     ],
   },
