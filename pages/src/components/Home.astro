@@ -11,12 +11,13 @@ const { t } = Astro.props;
   <div class="container nav-inner">
     <a class="brand" href={t.locale === 'en' ? '/en/' : '/'}>
       <img src="/favicon.svg" alt="soulink" width="24" height="24" />
-      <span>soulink</span>
+      <span>{t.nav.brand}</span>
     </a>
     <nav>
       <a href="#features">{t.nav.features}</a>
       <a href="#quickstart">{t.nav.quickstart}</a>
       <a href="#tiers">{t.nav.tiers}</a>
+      <a href="#faq">{t.nav.faq}</a>
       <a href="https://github.com/soulink9/soulink" target="_blank" rel="noopener">{t.nav.github}</a>
       <button class="theme-toggle" data-theme-toggle type="button" aria-label={t.nav.theme} title={t.nav.theme}>
         <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -124,6 +125,18 @@ soulink 3000 --subdomain myapp</code></pre>
         </table>
       </div>
       <p class="muted small">{t.tiers.note}</p>
+    </div>
+  </section>
+
+  <section id="faq" class="section">
+    <div class="container narrow">
+      <h2>{t.faq.title}</h2>
+      {t.faq.items.map((f) => (
+        <details class="faq-item">
+          <summary>{f.q}</summary>
+          <p set:html={f.a} />
+        </details>
+      ))}
     </div>
   </section>
 </main>

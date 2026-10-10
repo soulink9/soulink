@@ -6,15 +6,15 @@ const en: typeof zh = {
   altPath: '/',
   altLabel: '中文',
   meta: {
-    title: 'soulink — Share local services with one command',
-    desc: 'soulink is an open-source tunneling tool: one command to install, one command to expose a local port as a public HTTPS URL. Anonymous by default, register for a fixed subdomain.',
+    title: 'Soulink — Share your AI sparks with friends in one command',
+    desc: 'Soulink is an open-source tunneling tool: one command to install, one command to expose a local port as a public HTTPS URL. Anonymous by default, register for a fixed subdomain.',
   },
-  nav: { features: 'Features', quickstart: 'Quickstart', tiers: 'Tiers', github: 'GitHub', theme: 'Toggle theme' },
+  nav: { brand: 'Soulink', features: 'Features', quickstart: 'Quickstart', tiers: 'Tiers', faq: 'FAQ', github: 'GitHub', theme: 'Toggle theme' },
   hero: {
     badge: 'Open source · MIT · No sign-up',
-    titleA: 'One command to',
-    titleB: 'share your localhost with the world',
-    sub: 'No account, no config. Install soulink, run one command, and your local port becomes a public HTTPS URL.',
+    titleA: 'Share your AI sparks',
+    titleB: 'with friends, in one command',
+    sub: 'No account, no config. One command turns your local AI apps and services into public HTTPS URLs, ready to share.',
     ctaStart: 'Quickstart',
     ctaGithub: 'GitHub',
     termComment1: '# install (macOS / Linux)',
@@ -30,7 +30,7 @@ const en: typeof zh = {
       { t: 'Single binary', d: 'Written in Go, zero dependencies. macOS / Linux / Windows, one-command install.' },
       { t: 'Quotas & rate limits', d: 'Per-account rate limiting and daily/monthly traffic quotas, with fair-share protection for anonymous tunnels.' },
       { t: 'Built-in support', d: 'Message the admin right from the console — no issue tracker detour.' },
-      { t: 'Open & self-hostable', d: 'MIT licensed. Both hub and client are open source; run your own hub.' },
+      { t: 'Open-source client', d: 'MIT licensed, fully open on GitHub — transparent and auditable.' },
     ],
   },
   quickstart: {
@@ -55,6 +55,47 @@ const en: typeof zh = {
       ['max', '10 reserved subdomains', '50', '5 MB/s', '100 GB/day · 1 TB/month'],
     ],
     note: 'Quotas follow hub configuration; the above are the current defaults of soulink.cam.',
+  },
+  faq: {
+    title: 'FAQ',
+    items: [
+      {
+        q: 'How is soulink different from ngrok or frp?',
+        a: 'Open source (MIT) and anonymous by default: one install command, one command to get a public HTTPS URL — no account needed. Register to claim a fixed subdomain. Single-binary client for macOS / Linux / Windows.',
+      },
+      {
+        q: 'What are the limits of anonymous usage?',
+        a: 'Guest tunnels need no account: random subdomain (<code>xxx.apps.soulink.cam</code>), reclaimed after 4 hours, site-wide shared concurrency and bandwidth, 200 MB/day per tunnel. Great for quick demos; register for fixed subdomains and higher quotas (see the tier table above).',
+      },
+      {
+        q: 'Getting a 403 like "Host not allowed (loopback only)"?',
+        a: 'That is your local service enforcing a Host header allowlist: the tunnel forwards the visitor\'s Host (the public domain) unchanged, and the service only accepts localhost / 127.0.0.1. Either allowlist your tunnel domain in the service settings, or start the tunnel with <code>--rewrite-host</code> to rewrite Host to the target address (e.g. <code>127.0.0.1:3000</code>): <code>soulink 3000 --rewrite-host</code>.',
+      },
+      {
+        q: 'Does it support WebSocket?',
+        a: 'Yes. The tunnel carries a raw byte stream, so WebSocket upgrades pass through transparently with zero configuration.',
+      },
+      {
+        q: 'Can I expose a service on another machine in my LAN?',
+        a: 'Yes — registered users can point a tunnel at any internal address: <code>soulink http 192.168.1.10:8080</code>. For safety, guest tunnels only allow loopback targets.',
+      },
+      {
+        q: 'Download fails or is slow?',
+        a: "The installer falls back to built-in mirrors automatically when GitHub is unreachable, with sha256 verification throughout. You can also pin a mirror: <code>SOULINK_GITHUB_MIRROR=gh-proxy.com</code> (Windows: <code>$env:SOULINK_GITHUB_MIRROR='gh-proxy.com'</code>). On Windows you can also grab the zip from Releases.",
+      },
+      {
+        q: 'What happens when I exceed my quota?',
+        a: 'Tunnels are paused once the daily/monthly traffic limit is reached, and resume automatically in the next period. Live usage is visible in the console.',
+      },
+      {
+        q: 'Is my traffic secure?',
+        a: 'Traffic is encrypted end to end with HTTPS / wss. Note: TLS terminates at the hub, so the hub operator can technically see the plaintext being relayed — this is true of all relay-based tunneling services (ngrok included). The soulink hub is not open source at this time; evaluate sensitive use cases accordingly.',
+      },
+      {
+        q: 'Does the domain stay valid?',
+        a: 'Guest random subdomains are reclaimed after 4 hours; custom subdomains of registered users are durable. The client reconnects automatically with exponential backoff and tries to keep the original subdomain.',
+      },
+    ],
   },
   footer: {
     tagline: 'Open-source tunneling. One command to go live.',
