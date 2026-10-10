@@ -25,11 +25,12 @@ import (
 
 // Options 是一次隧道会话的全部参数。
 type Options struct {
-	Server    string // hub 地址，如 "localhost:8080" 或 "wss://hub.example.com"
-	Token     string
-	Subdomain string // 空 = 随机分配
-	Target    string // 转发目标：端口 / host:port / http(s)://host[:port]，见 ParseTarget
-	Insecure  bool   // wss 跳过证书校验（自签场景）
+	Server      string // hub 地址，如 "localhost:8080" 或 "wss://hub.example.com"
+	Token       string
+	Subdomain   string // 空 = 随机分配
+	Target      string // 转发目标：端口 / host:port / http(s)://host[:port]，见 ParseTarget
+	Insecure    bool   // wss 跳过证书校验（自签场景）
+	RewriteHost bool   // 把 Host 头改写为目标地址（本地服务只接受回环 Host 时启用）
 }
 
 const (
@@ -178,7 +179,7 @@ func runOnce(ctx context.Context, opts Options, target forward.Target) error {
 		if err != nil {
 			return fmt.Errorf("accept stream: %w", err)
 		}
-		go forward.Handle(stream, target)
+		go forward.Handle(stream, target, opts.RewriteHost)
 	}
 }
 

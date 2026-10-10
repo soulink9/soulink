@@ -53,6 +53,9 @@ soulink http 3000
 
 # 分享局域网内其他机器
 soulink http 192.168.1.10:8080
+
+# 本地服务只接受回环 Host（报「Host 不被允许」之类 403）时
+soulink http 3000 --rewrite-host
 ```
 
 参数优先级：`--server` / `--token` 命令行 > `SOULINK_SERVER` / `SOULINK_TOKEN` 环境变量

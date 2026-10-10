@@ -1,13 +1,18 @@
 // Package forward 把隧道 stream 转发到本地目标端口。
-// 隧道上传输的是原始 HTTP/1.1 字节流，本包不做任何协议解析，
-// 因此 WebSocket 升级流量天然透明。
+//
+// 默认是原始 HTTP/1.1 字节流透传，不做任何协议解析，WebSocket 升级流量
+// 天然透明。rewriteHost 模式逐请求解析 HTTP 头并改写 Host（解决本地服务
+// 只接受回环 Host 的白名单校验），WebSocket 升级请求转发后恢复透传。
 package forward
 
 import (
+	"bufio"
 	"crypto/tls"
 	"io"
 	"log"
 	"net"
+	"net/http"
+	"strings"
 	"time"
 )
 
@@ -42,7 +47,7 @@ func dial(t Target) (net.Conn, error) {
 }
 
 // Handle 把一条 yamux stream 与目标连接双向桥接，直到任一端关闭。
-func Handle(stream net.Conn, target Target) {
+func Handle(stream net.Conn, target Target, rewriteHost bool) {
 	defer stream.Close()
 
 	lc, err := dial(target)
@@ -54,15 +59,60 @@ func Handle(stream net.Conn, target Target) {
 	}
 	defer lc.Close()
 
-	// 任一方向拷贝结束即整体关闭，避免半开泄漏
+	if rewriteHost {
+		bridgeRewriteHost(lc, stream, target.Addr)
+		return
+	}
+	bridge(lc, stream)
+}
+
+// bridge 原始字节流双向桥接：任一方向拷贝结束即整体关闭，避免半开泄漏。
+func bridge(lc, stream net.Conn) {
 	done := make(chan struct{}, 2)
 	go func() {
-		io.Copy(lc, stream)
+		io.Copy(lc, stream) //nolint:errcheck
 		done <- struct{}{}
 	}()
 	go func() {
-		io.Copy(stream, lc)
+		io.Copy(stream, lc) //nolint:errcheck
 		done <- struct{}{}
 	}()
 	<-done
+}
+
+// bridgeRewriteHost 请求方向逐请求改写 Host 为目标地址；响应方向始终透传。
+// hub 每条 stream 只发一个请求（DisableKeepAlives），循环写法对将来的
+// keep-alive 同样安全；Upgrade 请求（WebSocket）转发后恢复字节流透传。
+func bridgeRewriteHost(lc, stream net.Conn, targetAddr string) {
+	br := bufio.NewReader(stream)
+	done := make(chan struct{}, 2)
+	go func() {
+		io.Copy(stream, lc) //nolint:errcheck
+		done <- struct{}{}
+	}()
+	go func() {
+		defer func() { done <- struct{}{} }()
+		for {
+			req, err := http.ReadRequest(br)
+			if err != nil {
+				return // 对端关闭（EOF）或协议异常，结束转发
+			}
+			req.RequestURI = "" // Request.Write 要求客户端语义，清空后由 URL 重建 origin-form
+			req.Host = targetAddr
+			if err := req.Write(lc); err != nil {
+				return
+			}
+			if isUpgrade(req) {
+				io.Copy(lc, br) //nolint:errcheck // WebSocket 后续帧透传（br 可能已缓冲）
+				return
+			}
+		}
+	}()
+	<-done
+}
+
+// isUpgrade 判定 WebSocket 等协议升级请求（Connection: upgrade + Upgrade 头）。
+func isUpgrade(req *http.Request) bool {
+	return req.Header.Get("Upgrade") != "" &&
+		strings.Contains(strings.ToLower(req.Header.Get("Connection")), "upgrade")
 }
