@@ -1,0 +1,47 @@
+name: deploy-pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pages/**'
+      - 'install.sh'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pages/package-lock.json
+      - run: npm ci
+        working-directory: pages
+      - run: npm run build
+        working-directory: pages
+      # install.sh 的权威源在仓库根目录，拷进站点产物（www.soulink.cam/install.sh）
+      - run: cp install.sh pages/dist/install.sh
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

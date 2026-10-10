@@ -1,0 +1,120 @@
+---
+import type zh from '../i18n/zh';
+
+interface Props {
+  t: typeof zh;
+}
+const { t } = Astro.props;
+---
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href={t.locale === 'en' ? '/en/' : '/'}>
+      <img src="/favicon.svg" alt="soulink" width="24" height="24" />
+      <span>soulink</span>
+    </a>
+    <nav>
+      <a href="#features">{t.nav.features}</a>
+      <a href="#quickstart">{t.nav.quickstart}</a>
+      <a href="#tiers">{t.nav.tiers}</a>
+      <a href="https://github.com/soulink9/soulink" target="_blank" rel="noopener">{t.nav.github}</a>
+      <a class="lang-switch" href={t.altPath}>{t.altLabel}</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <p class="badge">{t.hero.badge}</p>
+      <h1>{t.hero.titleA}<br /><span class="grad">{t.hero.titleB}</span></h1>
+      <p class="sub">{t.hero.sub}</p>
+      <div class="cta">
+        <a class="btn primary" href="#quickstart">{t.hero.ctaStart}</a>
+        <a class="btn" href="https://github.com/soulink9/soulink" target="_blank" rel="noopener">{t.hero.ctaGithub}</a>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i></div>
+        <pre><code>{t.hero.termComment1}
+$ curl -fsSL https://www.soulink.cam/install.sh | sh
+
+{t.hero.termComment2}
+$ soulink 3000
+<span class="ok">→ https://fresh-otter-42.apps.soulink.cam</span></code></pre>
+      </div>
+      <p class="term-note">{t.hero.termNote}</p>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <div class="container">
+      <h2>{t.features.title}</h2>
+      <div class="grid">
+        {t.features.items.map((f) => (
+          <div class="card">
+            <h3>{f.t}</h3>
+            <p>{f.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section id="quickstart" class="section">
+    <div class="container narrow">
+      <h2>{t.quickstart.title}</h2>
+
+      <h3>{t.quickstart.s1t}</h3>
+      <p>{t.quickstart.s1d}</p>
+      <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | sh</code></pre>
+      <p class="muted">{t.quickstart.s1note}</p>
+      <pre class="code"><code>curl -fsSL https://www.soulink.cam/install.sh | SOULINK_GITHUB_MIRROR=gh-proxy.com sh</code></pre>
+
+      <h3>{t.quickstart.s2t}</h3>
+      <p>{t.quickstart.s2d}</p>
+      <pre class="code"><code>soulink 3000
+<span class="ok">→ https://fresh-otter-42.apps.soulink.cam</span></code></pre>
+
+      <h3>{t.quickstart.s3t}</h3>
+      <p>{t.quickstart.s3d}</p>
+      <pre class="code"><code>soulink config set server https://hub.soulink.cam
+soulink config set token &lt;token&gt;
+soulink 3000 --subdomain myapp</code></pre>
+
+      <p class="muted">{t.quickstart.windows}</p>
+    </div>
+  </section>
+
+  <section id="tiers" class="section">
+    <div class="container">
+      <h2>{t.tiers.title}</h2>
+      <p class="muted">{t.tiers.desc}</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>{t.tiers.cols.map((c) => <th>{c}</th>)}</tr>
+          </thead>
+          <tbody>
+            {t.tiers.rows.map((r) => (
+              <tr>{r.map((cell) => <td>{cell}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small">{t.tiers.note}</p>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <p>{t.footer.tagline}</p>
+    <nav>
+      <a href="https://github.com/soulink9/soulink" target="_blank" rel="noopener">{t.footer.github}</a>
+      <a href="https://github.com/soulink9/soulink/releases" target="_blank" rel="noopener">{t.footer.releases}</a>
+      <a href="https://hub.soulink.cam" target="_blank" rel="noopener">{t.footer.console}</a>
+      <a href="https://github.com/soulink9/soulink/blob/main/LICENSE" target="_blank" rel="noopener">{t.footer.license}</a>
+    </nav>
+    <p class="muted small">© 2026 soulink</p>
+  </div>
+</footer>

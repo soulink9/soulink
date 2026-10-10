@@ -5,13 +5,26 @@
 soulink 客户端：一条命令把本地 Web 服务（含 WebSocket）分享出去。
 单二进制、无依赖，支持 linux / darwin / windows（amd64、arm64）。
 
-```bash
-go install github.com/soulink9/soulink/cmd/soulink@latest
-```
+官网：https://www.soulink.cam（[English](https://www.soulink.cam/en/)）
 
 ## 安装
 
-从 Releases 下载对应平台归档，或自行构建：
+macOS / Linux 一条命令（匿名即用，无需注册）：
+
+```bash
+curl -fsSL https://www.soulink.cam/install.sh | sh
+soulink 3000   # → https://<随机名>.apps.soulink.cam
+```
+
+国内网络可用镜像加速下载：
+
+```bash
+curl -fsSL https://www.soulink.cam/install.sh | SOULINK_GITHUB_MIRROR=gh-proxy.com sh
+```
+
+Windows：从 [Releases](https://github.com/soulink9/soulink/releases) 下载 zip 解压即用。
+
+其他方式：`go install github.com/soulink9/soulink/cmd/soulink@latest`，或自行构建：
 
 ```bash
 make build   # 本机平台 → bin/soulink
@@ -30,7 +43,7 @@ soulink config unset token
 
 # 2. 分享本地 3000 端口，指定子域名
 soulink http 3000 --subdomain demo
-# → https://demo.hub.example.com
+# → https://demo.apps.soulink.cam
 
 # 免配置（guest 通道：随机域名、限时回收）
 soulink http 3000

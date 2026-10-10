@@ -1,0 +1,9 @@
+---
+import Base from '../../layouts/Base.astro';
+import Home from '../../components/Home.astro';
+import t from '../../i18n/en';
+---
+
+<Base lang={t.locale} title={t.meta.title} desc={t.meta.desc}>
+  <Home t={t} />
+</Base>
