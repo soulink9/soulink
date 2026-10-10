@@ -1,7 +1,13 @@
-# soulink-local
+# soulink
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 soulink 客户端：一条命令把本地 Web 服务（含 WebSocket）分享出去。
 单二进制、无依赖，支持 linux / darwin / windows（amd64、arm64）。
+
+```bash
+go install github.com/soulink9/soulink/cmd/soulink@latest
+```
 
 ## 安装
 
