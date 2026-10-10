@@ -1,0 +1,31 @@
+# 发布流水线：推 v* tag 即自动构建六平台产物并创建 GitHub Release。
+# 纯 Go 零 CGO，单 ubuntu runner 交叉编译全部平台（经 Makefile 复用本地发版逻辑）。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # make dist 的 git describe 需要完整 tag 历史
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build six-platform archives
+        run: make dist
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.zip dist/checksums.txt --title "${GITHUB_REF_NAME}" --generate-notes
