@@ -18,9 +18,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/yamux"
 
-	"github.com/soulink/soulink-local/internal/forward"
-	"github.com/soulink/soulink-local/proto"
-	"github.com/soulink/soulink-local/proto/wsconn"
+	"github.com/soulink9/soulink/internal/forward"
+	"github.com/soulink9/soulink/proto"
+	"github.com/soulink9/soulink/proto/wsconn"
 )
 
 // Options 是一次隧道会话的全部参数。

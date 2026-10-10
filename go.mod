@@ -1,4 +1,4 @@
-module github.com/soulink/soulink-local
+module github.com/soulink9/soulink
 
 go 1.22
 

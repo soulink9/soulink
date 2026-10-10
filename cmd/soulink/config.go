@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/soulink/soulink-local/internal/config"
+	"github.com/soulink9/soulink/internal/config"
 )
 
 // newConfigCmd 构建 config 子命令族：path / show / set / unset。

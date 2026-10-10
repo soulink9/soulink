@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/soulink/soulink-local/client"
-	"github.com/soulink/soulink-local/internal/config"
+	"github.com/soulink9/soulink/client"
+	"github.com/soulink9/soulink/internal/config"
 )
 
 const defaultGuestToken = "soulink-guest" // 与 hub 默认配置一致的公开 token
@@ -42,7 +42,7 @@ func main() {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.SetVersionTemplate(fmt.Sprintf("soulink %s (commit %s) %s/%s\nbuilt at: %s\nhttps://github.com/soulink/soulink-local\n",
+	root.SetVersionTemplate(fmt.Sprintf("soulink %s (commit %s) %s/%s\nbuilt at: %s\nhttps://github.com/soulink9/soulink\n",
 		version, commit, runtime.GOOS, runtime.GOARCH, date))
 
 	httpCmd, runHTTP := newHTTPCmd(root)

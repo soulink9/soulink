@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/soulink/soulink-local/client"
+	"github.com/soulink9/soulink/client"
 )
 
 // newHTTPCmd 构建 http 子命令，并返回其 RunE 供 root 的裸目标形式复用

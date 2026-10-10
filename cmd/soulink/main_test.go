@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/soulink/soulink-local/client"
-	"github.com/soulink/soulink-local/internal/config"
+	"github.com/soulink9/soulink/client"
+	"github.com/soulink9/soulink/internal/config"
 )
 
 // isolateEnv 把两个 env 覆盖层置空，避免宿主机环境污染用例。
