@@ -33,6 +33,13 @@ type Options struct {
 	RewriteHost bool   // 把 Host 头改写为目标地址（本地服务只接受回环 Host 时启用）
 }
 
+// resumeState 是最近一次成功注册的随机域名与认领凭证，
+// 断线重连时携带可拿回原域名（仅随机名隧道有凭证，固定域名走持久预留）。
+type resumeState struct {
+	subdomain string
+	token     string
+}
+
 const (
 	handshakeTimeout = 10 * time.Second
 	maxBackoff       = 30 * time.Second
@@ -55,9 +62,13 @@ func Run(ctx context.Context, opts Options) error {
 	}
 	probeTarget(target)
 	backoff := time.Second
+	var resume *resumeState // 断线后据此认领原域名；空 = 尚未分配过
 	for {
 		start := time.Now()
-		err := runOnce(ctx, opts, target)
+		next, err := runOnce(ctx, opts, target, resume)
+		if next != nil {
+			resume = next // 更新为本次分配（含续期后的新凭证）
+		}
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -94,10 +105,10 @@ func probeTarget(t forward.Target) {
 	c.Close()
 }
 
-func runOnce(ctx context.Context, opts Options, target forward.Target) error {
+func runOnce(ctx context.Context, opts Options, target forward.Target, prev *resumeState) (*resumeState, error) {
 	u, err := connectURL(opts.Server)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dialer := *websocket.DefaultDialer
@@ -111,9 +122,9 @@ func runOnce(ctx context.Context, opts Options, target forward.Target) error {
 	ws, resp, err := dialer.DialContext(ctx, u, header)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
-			return errUnauthorized
+			return nil, errUnauthorized
 		}
-		return fmt.Errorf("dial hub: %w", err)
+		return nil, fmt.Errorf("dial hub: %w", err)
 	}
 	defer ws.Close()
 
@@ -125,29 +136,42 @@ func runOnce(ctx context.Context, opts Options, target forward.Target) error {
 		RequestedSubdomain: opts.Subdomain,
 		Target:             target.Addr,
 	}
+	// 随机名模式下携带上次分配的域名与凭证，尝试在保留期内拿回原域名
+	if opts.Subdomain == "" && prev != nil {
+		reg.ResumeSubdomain = prev.subdomain
+		reg.ResumeToken = prev.token
+	}
 	ws.SetWriteDeadline(time.Now().Add(handshakeTimeout))
 	if err := ws.WriteJSON(reg); err != nil {
-		return fmt.Errorf("send register: %w", err)
+		return nil, fmt.Errorf("send register: %w", err)
 	}
 	ws.SetReadDeadline(time.Now().Add(handshakeTimeout))
 	_, raw, err := ws.ReadMessage()
 	if err != nil {
-		return fmt.Errorf("read register reply: %w", err)
+		return nil, fmt.Errorf("read register reply: %w", err)
 	}
 	ws.SetReadDeadline(time.Time{})
 	ws.SetWriteDeadline(time.Time{})
 
 	var reply proto.Registered
 	if err := json.Unmarshal(raw, &reply); err != nil {
-		return fmt.Errorf("parse register reply: %w", err)
+		return nil, fmt.Errorf("parse register reply: %w", err)
 	}
 	if reply.Type == proto.MsgTypeError {
 		var e proto.Error
 		json.Unmarshal(raw, &e)
-		return fmt.Errorf("hub rejected: %s (%s)", e.Code, e.Message)
+		return nil, fmt.Errorf("hub rejected: %s (%s)", e.Code, e.Message)
 	}
 	if reply.Type != proto.MsgTypeRegistered {
-		return fmt.Errorf("unexpected reply type %q", reply.Type)
+		return nil, fmt.Errorf("unexpected reply type %q", reply.Type)
+	}
+	// 记录本次分配，供下次断线重连认领（仅随机名隧道下发凭证）
+	var next *resumeState
+	if reply.Name != "" && reply.ResumeToken != "" {
+		next = &resumeState{subdomain: reply.Name, token: reply.ResumeToken}
+	}
+	if prev != nil && opts.Subdomain == "" && reply.Name != "" && reply.Name != prev.subdomain {
+		log.Printf("原域名 %s 未能保留（保留期已过或被占用），已重新分配为 %s", prev.subdomain, reply.Name)
 	}
 	for _, u := range reply.URLs {
 		fmt.Printf("→ %s\n", u)
@@ -161,7 +185,7 @@ func runOnce(ctx context.Context, opts Options, target forward.Target) error {
 	// ---- 数据面：yamux 会话 ----
 	sess, err := yamux.Client(wsconn.New(ws), nil)
 	if err != nil {
-		return fmt.Errorf("yamux client: %w", err)
+		return next, fmt.Errorf("yamux client: %w", err)
 	}
 	defer sess.Close()
 
@@ -177,7 +201,7 @@ func runOnce(ctx context.Context, opts Options, target forward.Target) error {
 	for {
 		stream, err := sess.AcceptStream()
 		if err != nil {
-			return fmt.Errorf("accept stream: %w", err)
+			return next, fmt.Errorf("accept stream: %w", err)
 		}
 		go forward.Handle(stream, target, opts.RewriteHost)
 	}
