@@ -70,7 +70,8 @@ shell 自动补全：`soulink completion bash|zsh|fish|powershell`（按命令�
 > 手工构建用 `-ldflags "-X main.defaultServer=https://your-hub"`（**置空**即恢复「每次必须显式指定 `--server`」）；
 > 经 Makefile 出包则设环境变量 `SOULINK_DEFAULT_SERVER=https://your-hub`，不设即沿用源码内置值，无需改发布配置。
 
-断线自动重连（指数退避），重连后尽量保持原子域名。
+断线自动重连（指数退避）；随机域名在断线保留窗口内（hub 默认 90s）会被自动认领回来，
+超出窗口才重新分配。固定域名由预留保护，重连后总能拿回。
 
 ## proto/
 
