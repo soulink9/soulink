@@ -1,5 +1,8 @@
 /soulink
-bin/
+# 本机构建产物；bin/soulink.js 是 npm launcher，需入库
+/bin/soulink
 .DS_Store
 # make dist 的六平台产物
 /dist/
+# npm 平台包内的二进制，发布时由 scripts/publish-npm.sh 临时拷入
+/npm/*/bin/

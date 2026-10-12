@@ -29,3 +29,34 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.zip dist/checksums.txt --title "${GITHUB_REF_NAME}" --generate-notes
+
+  # 依赖 release job：平台包与根包发布后，用户 npm 安装即拿到与本次 Release 同版本的二进制。
+  # 认证：npm CLI 检测到 OIDC 环境即优先用 trusted publishing，未配置时回落到 NPM_TOKEN。
+  # bypass-2FA token 将于 2027-01 失去 direct publish，故此处按 OIDC 先行准备。
+  npm:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # npm provenance 走 OIDC，需此权限
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # make dist 的 git describe 需要完整 tag 历史
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # trusted publishing 要求 npm CLI ≥ 11.5.1；Node 24 自带 11.19
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION_TAG: ${{ github.ref_name }}
+          NPM_PROVENANCE: 1
+        run: bash scripts/publish-npm.sh

@@ -31,6 +31,8 @@ build-all: ## 六平台裸二进制 → dist/
 		GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 go build -trimpath -ldflags "$(LD_FLAGS)" -o "$$out" ./cmd/soulink || exit 1; \
 	done
 
+# dist 保留裸二进制不删：npm 平台包由 scripts/publish-npm.sh 从中取二进制。
+# 裸二进制不进 GitHub Release 资产——release.yml 显式列举了上传的文件名。
 dist: clean build-all ## 六平台归档 + checksums → dist/（unix tar.gz / windows zip，各含 README）
 	@for p in $(PLATFORMS); do \
 		os=$${p%/*}; arch=$${p#*/}; \
@@ -42,7 +44,6 @@ dist: clean build-all ## 六平台归档 + checksums → dist/（unix tar.gz / w
 		else \
 			tar -czf "$(DIST_DIR)/$$pkg.tar.gz" -C $(DIST_DIR) "$$bin" -C .. README.md || exit 1; \
 		fi; \
-		rm "$(DIST_DIR)/$$bin"; \
 	done
 	@cd $(DIST_DIR) && shasum -a 256 *.tar.gz *.zip | sort > checksums.txt
 	@echo "=== 产物（$(VERSION) / $(COMMIT)）==="

@@ -1,0 +1,32 @@
+{
+  "name": "soulink",
+  "version": "0.0.0",
+  "description": "把本地 Web 服务（含 WebSocket）一条命令分享出去",
+  "bin": {
+    "soulink": "bin/soulink.js"
+  },
+  "files": [
+    "bin/soulink.js",
+    "scripts/platform.js"
+  ],
+  "optionalDependencies": {
+    "@soulink9/soulink-darwin-arm64": "0.0.0",
+    "@soulink9/soulink-darwin-x64": "0.0.0",
+    "@soulink9/soulink-linux-arm64": "0.0.0",
+    "@soulink9/soulink-linux-x64": "0.0.0",
+    "@soulink9/soulink-win32-arm64": "0.0.0",
+    "@soulink9/soulink-win32-x64": "0.0.0"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soulink9/soulink.git"
+  },
+  "homepage": "https://www.soulink.cam",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

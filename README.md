@@ -27,6 +27,17 @@ irm https://www.soulink.cam/install.ps1 | iex
 
 也可以从 [Releases](https://github.com/soulink9/soulink/releases) 下载 zip 解压即用。
 
+Node 环境（Node ≥ 14）：
+
+```bash
+npm install -g soulink
+npx -y soulink 3000   # 或不安装直接试用
+```
+
+> 二进制由平台包（`@soulink9/soulink-<平台>`）随主包自动安装。若安装时带了
+> `--omit=optional`（或 `--no-optional`），平台包会被跳过，运行时报「未找到 soulink
+> 二进制」，去掉该参数重装即可。
+
 其他方式：`go install github.com/soulink9/soulink/cmd/soulink@latest`，或自行构建：
 
 ```bash
