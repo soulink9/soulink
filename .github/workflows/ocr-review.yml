@@ -1,0 +1,41 @@
+# OpenCodeReview：PR 自动 AI 代码审查。
+#
+# 经官方 composite action 调用——它自带完整 checkout（fetch-depth: 0）与
+# fork-safe 的 PR head 拉取，故本 workflow 无需自己的 checkout 步骤。
+#
+# 需要的仓库 secret（Settings → Secrets and variables → Actions）：
+#   OCR_LLM_URL        兼容 Anthropic 协议的接口地址
+#   OCR_LLM_AUTH_TOKEN 该接口的 token
+#   OCR_LLM_MODEL      模型名
+#
+# 触发范围：PR 新开 / 推送新 commit / 重新打开。fork PR 取不到 secret，跳过。
+name: OpenCodeReview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # fork PR 拿不到 secrets，跳过而非报错；同仓库分支（即本仓全部 PR）正常审查
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: alibaba/open-code-review@v1.12.13
+        with:
+          llm_url: ${{ secrets.OCR_LLM_URL }}
+          llm_auth_token: ${{ secrets.OCR_LLM_AUTH_TOKEN }}
+          llm_model: ${{ secrets.OCR_LLM_MODEL }}
+          # 接口兼容 Anthropic 协议，固定为 true（无需占用 secret）
+          llm_use_anthropic: 'true'
+          language: Chinese
+          github_token: ${{ secrets.GITHUB_TOKEN }}
