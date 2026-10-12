@@ -7,6 +7,9 @@ const { spawn } = require("child_process");
 const os = require("os");
 
 const { resolveNativeBinary } = require("../scripts/platform");
+// 安装说明链接取自 package.json 的 homepage：与包元数据共用一处真相，换域名时
+// 不会漏掉错误提示里的这一份。
+const { homepage } = require("../package.json");
 
 // 子进程被信号杀死时 status 为 null，不能落回 0：否则 OOM 或任意信号退出
 // 会被下游流水线读成成功。按惯例映射为 128+signo。
@@ -65,7 +68,7 @@ if (!resolved) {
       "        常见原因：安装时带了 --omit=optional（或 --no-optional），\n" +
       "        导致平台二进制包被跳过。请重新安装：\n" +
       "          npm install -g soulink\n" +
-      "        其他安装方式见 https://www.soulink.cam"
+      `        其他安装方式见 ${homepage}`
   );
   process.exit(1);
 }

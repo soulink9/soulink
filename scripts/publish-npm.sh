@@ -43,19 +43,25 @@ ok()   { printf '\033[0;32m[OK]\033[0m    %s\n' "$*"; }
 warn() { printf '\033[0;33m[WARN]\033[0m  %s\n' "$*" >&2; }
 die()  { printf '\033[0;31m[ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 
-# 查询 registry 上是否已存在 $NPM_VERSION。
-# 仅把「版本不存在」（E404 一类）视为否；网络、认证等其它错误直接终止——
-# 否则查询失败会被误判成「需要发布」，直到 npm publish 才以难懂的报错失败。
+# 查询 registry 上是否已存在 $NPM_VERSION：存在返回 0，不存在返回 1。
+# 用 --json 拿机器可读的 error.code 判断，不去匹配「is not in this registry」这类
+# 人类文案——文案随 npm 版本与 registry 实现而变，而误判的代价不可逆：把「不存在」
+# 误判成「已存在」会跳过平台包，随后根包照发，那个版本号就废了（npm 不允许重发
+# 同一版本）。仅 E404 视为「不存在」，其余错误一律终止。
 npm_version_exists() {
-  local pkg="$1" out
-  if out="$(npm view "$pkg@$NPM_VERSION" version --registry "$REGISTRY" 2>&1)"; then
-    [ "$out" = "$NPM_VERSION" ]
-    return
+  local pkg="$1" out code
+  # 只看 stdout：npm 的错误 JSON 写 stdout，人类可读的日志写 stderr
+  if out="$(npm view "$pkg@$NPM_VERSION" version --registry "$REGISTRY" --json 2>/dev/null)"; then
+    if [ "$(printf '%s' "$out" | jq -r '.')" = "$NPM_VERSION" ]; then
+      return 0
+    fi
+    return 1
   fi
-  case "$out" in
-    *E404*|*"is not in this registry"*|*"No match found"*) return 1 ;;
-    *) die "查询 $pkg 失败：$out" ;;
-  esac
+  code="$(printf '%s' "$out" | jq -r '.error.code // empty' 2>/dev/null || true)"
+  if [ "$code" = "E404" ]; then
+    return 1
+  fi
+  die "查询 $pkg 失败：${code:-无法从 npm 输出解析错误码}（原始输出：$(printf '%s' "$out" | head -c 200)）"
 }
 
 # ── 版本 ──────────────────────────────────────────────────────────────
