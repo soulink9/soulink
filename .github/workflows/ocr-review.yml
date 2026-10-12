@@ -37,5 +37,7 @@ jobs:
           llm_model: ${{ secrets.OCR_LLM_MODEL }}
           # 接口兼容 Anthropic 协议，固定为 true（无需占用 secret）
           llm_use_anthropic: 'true'
+          # 把 [ocr] 的实时进度与错误写进 workflow 日志，便于定位 LLM 侧问题
+          stream_progress: 'true'
           language: Chinese
           github_token: ${{ secrets.GITHUB_TOKEN }}
