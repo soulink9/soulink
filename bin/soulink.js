@@ -30,8 +30,11 @@ function installSignalHandlers(child, platform, signalTarget) {
     signalTarget.on(signal, handler);
   }
 
-  // Windows 把控制台 Ctrl+C 同时投递给两个进程。保留 wrapper 以等待子进程自行
+  // Windows 把控制台 Ctrl+C 同时投递给两个进程。保留空 handler 以等待子进程自行
   // 结束；此处若调 child.kill("SIGINT")，Node 会映射成 TerminateProcess 强杀。
+  // 已知代价：子进程收到 Ctrl+C 后若不退出，父进程会一直等下去。正常 Go 程序不会
+  // 这样（信号由 runtime 转成 os.Interrupt，默认终止进程）。加超时强杀需要引入
+  // 定时器与竞态处理，且区分不了「卡死」与「正在优雅收尾」，收益不抵复杂度。
   if (platform === "win32") {
     add("SIGINT", () => {});
   } else {

@@ -41,13 +41,18 @@ function resolveNativeBinary() {
     }
   }
 
-  const localPath = path.join(__dirname, "..", "bin", BINARY_FILENAME);
-  return fs.existsSync(localPath) ? localPath : null;
+  // 兜底本机产物。Windows 上 `go build -o bin/soulink` 不会追加 .exe，但手工构建
+  // 或经 Makefile 的 windows 目标时可能是 .exe——两个名字都试一遍。
+  const localNames = IS_WINDOWS
+    ? [BINARY_FILENAME, "soulink"]
+    : [BINARY_FILENAME];
+  for (const name of localNames) {
+    const localPath = path.join(__dirname, "..", "bin", name);
+    if (fs.existsSync(localPath)) {
+      return localPath;
+    }
+  }
+  return null;
 }
 
-module.exports = {
-  IS_WINDOWS,
-  BINARY_FILENAME,
-  PLATFORM_PKG,
-  resolveNativeBinary,
-};
+module.exports = { resolveNativeBinary };

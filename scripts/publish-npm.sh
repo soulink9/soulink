@@ -13,10 +13,10 @@
 # 环境变量：
 #   VERSION_TAG       覆盖版本来源（vX.Y.Z 或 X.Y.Z）
 #   NPM_REGISTRY      发布 registry，默认官方（本机 registry 可能指向镜像，发布须显式指定）
-#   SKIP_BUILD=1      跳过 make dist，复用现有 dist/
+#   SKIP_BUILD=1      跳过 make dist，复用现有 dist/（CI 里产物经 artifact 传下来）
 #   PUBLISH_DRY_RUN=1 只跑 npm publish --dry-run，不真正发布
 #   NPM_PROVENANCE=1  追加 --provenance（仅 GitHub Actions OIDC 环境可用）
-#   NODE_AUTH_TOKEN   CI 由 setup-node 注入；走 trusted publishing 时为空
+#   NODE_AUTH_TOKEN   CI 由 setup-node 注入；纯 OIDC（无 token）时预检自动跳过
 
 set -euo pipefail
 
@@ -64,16 +64,22 @@ VERSION_TAG="${VERSION_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || true
 NPM_VERSION="${VERSION_TAG#v}"
 
 # ── 前置检查 ──────────────────────────────────────────────────────────
-for cmd in go npm jq git; do
+for cmd in npm jq git; do
   command -v "$cmd" >/dev/null 2>&1 || die "缺少命令：$cmd"
 done
+# go 只在需要现场构建时才要求：CI 走 SKIP_BUILD=1，产物由 release job 编好传下来。
+if [ "$SKIP_BUILD" != "1" ]; then
+  command -v go >/dev/null 2>&1 ||
+    die "缺少命令：go（构建需要；SKIP_BUILD=1 可复用现有 dist/）"
+fi
 
 # 发布过程要临时改写 package.json（结束还原），脏工作树会让还原语义不确定
 [ -z "$(git status --porcelain)" ] || die "工作树有未提交改动，请先提交或 stash"
 
-# 认证预检：仅在本地或显式配置了 token 时执行。CI 走 trusted publishing（OIDC）
-# 时没有 NPM_TOKEN，而 npm whoami 不支持 OIDC，预检会误报未登录并中断发布；
-# 该场景下的认证交给 npm publish 自己保证。
+# 认证预检：仅在本地或显式配置了 token 时执行。npm CLI 检测到 OIDC 环境会优先用
+# trusted publishing（先于 NODE_AUTH_TOKEN），而 npm whoami 不支持 OIDC——CI 里
+# 无 token（纯 OIDC）时预检会误报未登录并中断发布，故跳过；该场景的认证交给
+# npm publish 自己保证。
 if [ "$DRY_RUN" != "1" ] &&
   { [ -z "${GITHUB_ACTIONS:-}" ] || [ -n "${NODE_AUTH_TOKEN:-}" ]; }; then
   npm whoami --registry "$REGISTRY" >/dev/null 2>&1 ||
@@ -109,20 +115,30 @@ restore() {
 trap restore EXIT
 
 # ── 组装平台包 ────────────────────────────────────────────────────────
+# 顺带收集包名，供下面注入版本时做白名单。
+PLATFORM_PKGS=()
 for entry in "${PLATFORMS[@]}"; do
   IFS=':' read -r dir dist_bin bin_name <<< "$entry"
   src="$PROJECT_ROOT/dist/$dist_bin"
   [ -f "$src" ] || die "缺少产物 $src"
   mkdir -p "$PROJECT_ROOT/npm/$dir/bin"
   cp "$src" "$PROJECT_ROOT/npm/$dir/bin/$bin_name"
+  # CI 里产物经 upload/download-artifact 传递，而 v4 不保留文件模式，故此处 chmod
+  # 不能省：少了它，用户装到的二进制没有可执行位。
   chmod 755 "$PROJECT_ROOT/npm/$dir/bin/$bin_name" 2>/dev/null || true
+  PLATFORM_PKGS+=("$(jq -r '.name' "$PROJECT_ROOT/npm/$dir/package.json")")
 done
 ok "六平台二进制已就位"
 
 # ── 注入版本（临时；退出时还原） ──────────────────────────────────────
+# 只改本仓库管辖的六个平台包。若整体改写 optionalDependencies，将来往根包加任何
+# 别的可选依赖都会被顺手覆盖成同一版本号。
 cp "$PROJECT_ROOT/package.json" "$PROJECT_ROOT/package.json.bak"
-jq --arg v "$NPM_VERSION" \
-  '.version = $v | .optionalDependencies |= with_entries(.value = $v)' \
+PLATFORM_PKGS_JSON="$(printf '%s\n' "${PLATFORM_PKGS[@]}" | jq -R . | jq -s -c .)"
+jq --arg v "$NPM_VERSION" --argjson pkgs "$PLATFORM_PKGS_JSON" \
+  '.version = $v
+   | .optionalDependencies |= with_entries(
+       .key as $k | if ($pkgs | index($k)) then .value = $v else . end)' \
   "$PROJECT_ROOT/package.json.bak" > "$PROJECT_ROOT/package.json"
 
 for entry in "${PLATFORMS[@]}"; do
