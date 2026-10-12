@@ -30,7 +30,9 @@ jobs:
     # fork PR 拿不到 secrets，跳过而非报错；同仓库分支（即本仓全部 PR）正常审查
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - uses: alibaba/open-code-review@v1.12.13
+      # 固定到 commit SHA 而非可变 tag：本 action 持有 pull-requests: write，
+      # tag 被上游重指即可在 CI 中执行任意代码（供应链风险）。
+      - uses: alibaba/open-code-review@fabbdb296b0d97e2140ada8d54ca7d6d6d1d7ad4 # v1.12.13
         with:
           llm_url: ${{ secrets.OCR_LLM_URL }}
           llm_auth_token: ${{ secrets.OCR_LLM_AUTH_TOKEN }}

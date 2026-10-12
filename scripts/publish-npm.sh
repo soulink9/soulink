@@ -16,6 +16,7 @@
 #   SKIP_BUILD=1      跳过 make dist，复用现有 dist/
 #   PUBLISH_DRY_RUN=1 只跑 npm publish --dry-run，不真正发布
 #   NPM_PROVENANCE=1  追加 --provenance（仅 GitHub Actions OIDC 环境可用）
+#   NODE_AUTH_TOKEN   CI 由 setup-node 注入；走 trusted publishing 时为空
 
 set -euo pipefail
 
@@ -42,6 +43,21 @@ ok()   { printf '\033[0;32m[OK]\033[0m    %s\n' "$*"; }
 warn() { printf '\033[0;33m[WARN]\033[0m  %s\n' "$*" >&2; }
 die()  { printf '\033[0;31m[ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 
+# 查询 registry 上是否已存在 $NPM_VERSION。
+# 仅把「版本不存在」（E404 一类）视为否；网络、认证等其它错误直接终止——
+# 否则查询失败会被误判成「需要发布」，直到 npm publish 才以难懂的报错失败。
+npm_version_exists() {
+  local pkg="$1" out
+  if out="$(npm view "$pkg@$NPM_VERSION" version --registry "$REGISTRY" 2>&1)"; then
+    [ "$out" = "$NPM_VERSION" ]
+    return
+  fi
+  case "$out" in
+    *E404*|*"is not in this registry"*|*"No match found"*) return 1 ;;
+    *) die "查询 $pkg 失败：$out" ;;
+  esac
+}
+
 # ── 版本 ──────────────────────────────────────────────────────────────
 VERSION_TAG="${VERSION_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || true)}"
 [ -n "$VERSION_TAG" ] || die "取不到版本；请显式指定 VERSION_TAG=vX.Y.Z"
@@ -55,7 +71,11 @@ done
 # 发布过程要临时改写 package.json（结束还原），脏工作树会让还原语义不确定
 [ -z "$(git status --porcelain)" ] || die "工作树有未提交改动，请先提交或 stash"
 
-if [ "$DRY_RUN" != "1" ]; then
+# 认证预检：仅在本地或显式配置了 token 时执行。CI 走 trusted publishing（OIDC）
+# 时没有 NPM_TOKEN，而 npm whoami 不支持 OIDC，预检会误报未登录并中断发布；
+# 该场景下的认证交给 npm publish 自己保证。
+if [ "$DRY_RUN" != "1" ] &&
+  { [ -z "${GITHUB_ACTIONS:-}" ] || [ -n "${NODE_AUTH_TOKEN:-}" ]; }; then
   npm whoami --registry "$REGISTRY" >/dev/null 2>&1 ||
     die "npm 未登录或 token 无效（本地请先 npm login --registry $REGISTRY）"
 fi
@@ -67,21 +87,13 @@ if [ "$SKIP_BUILD" = "1" ]; then
   warn "跳过构建（SKIP_BUILD=1），复用现有 dist/"
 else
   info "构建六平台产物…"
-  make dist >/dev/null || die "make dist 失败"
+  # 不吞输出：编译错误直接进日志，否则失败时只剩一句「make dist 失败」
+  make dist || die "make dist 失败"
 fi
 
-# ── 组装平台包 ────────────────────────────────────────────────────────
-for entry in "${PLATFORMS[@]}"; do
-  IFS=':' read -r dir dist_bin bin_name <<< "$entry"
-  src="$PROJECT_ROOT/dist/$dist_bin"
-  [ -f "$src" ] || die "缺少产物 $src"
-  mkdir -p "$PROJECT_ROOT/npm/$dir/bin"
-  cp "$src" "$PROJECT_ROOT/npm/$dir/bin/$bin_name"
-  chmod 755 "$PROJECT_ROOT/npm/$dir/bin/$bin_name" 2>/dev/null || true
-done
-ok "六平台二进制已就位"
-
-# ── 注入版本（临时；退出时连同二进制一并还原） ────────────────────────
+# ── 清理钩子 ──────────────────────────────────────────────────────────
+# 必须在组装平台包之前注册：组装阶段会创建 npm/*/bin 并拷入二进制，中途 die
+# （如产物缺失）若不清理会留下残留，并被后续 SKIP_BUILD 重跑掩盖成「已就位」。
 restore() {
   local entry dir pkg
   for entry in "${PLATFORMS[@]}"; do
@@ -96,6 +108,18 @@ restore() {
 }
 trap restore EXIT
 
+# ── 组装平台包 ────────────────────────────────────────────────────────
+for entry in "${PLATFORMS[@]}"; do
+  IFS=':' read -r dir dist_bin bin_name <<< "$entry"
+  src="$PROJECT_ROOT/dist/$dist_bin"
+  [ -f "$src" ] || die "缺少产物 $src"
+  mkdir -p "$PROJECT_ROOT/npm/$dir/bin"
+  cp "$src" "$PROJECT_ROOT/npm/$dir/bin/$bin_name"
+  chmod 755 "$PROJECT_ROOT/npm/$dir/bin/$bin_name" 2>/dev/null || true
+done
+ok "六平台二进制已就位"
+
+# ── 注入版本（临时；退出时还原） ──────────────────────────────────────
 cp "$PROJECT_ROOT/package.json" "$PROJECT_ROOT/package.json.bak"
 jq --arg v "$NPM_VERSION" \
   '.version = $v | .optionalDependencies |= with_entries(.value = $v)' \
@@ -117,8 +141,7 @@ PUBLISH_ARGS=(--registry "$REGISTRY" --access public)
 for entry in "${PLATFORMS[@]}"; do
   dir="${entry%%:*}"
   name="$(jq -r '.name' "$PROJECT_ROOT/npm/$dir/package.json")"
-  already="$(npm view "$name@$NPM_VERSION" version --registry "$REGISTRY" 2>/dev/null || true)"
-  if [ "$already" = "$NPM_VERSION" ]; then
+  if npm_version_exists "$name"; then
     warn "  $name@$NPM_VERSION 已存在，跳过"
     continue
   fi
@@ -133,8 +156,7 @@ if [ "$DRY_RUN" != "1" ]; then
   for entry in "${PLATFORMS[@]}"; do
     dir="${entry%%:*}"
     name="$(jq -r '.name' "$PROJECT_ROOT/npm/$dir/package.json")"
-    got="$(npm view "$name@$NPM_VERSION" version --registry "$REGISTRY" 2>/dev/null || true)"
-    [ "$got" = "$NPM_VERSION" ] || die "$name@$NPM_VERSION 未就位，根包不能先发"
+    npm_version_exists "$name" || die "$name@$NPM_VERSION 未就位，根包不能先发"
   done
   ok "六平台包均已就位"
 fi
