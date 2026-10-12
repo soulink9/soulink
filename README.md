@@ -30,8 +30,8 @@ irm https://www.soulink.cam/install.ps1 | iex
 Node 环境（Node ≥ 14）：
 
 ```bash
-npm install -g soulink
-npx -y soulink 3000   # 或不安装直接试用
+npm install -g @soulink9/soulink
+npx -y @soulink9/soulink 3000   # 或不安装直接试用
 ```
 
 > 二进制由平台包（`@soulink9/soulink-<平台>`）随主包自动安装。若安装时带了

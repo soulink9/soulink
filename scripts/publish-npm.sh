@@ -17,6 +17,8 @@
 #   PUBLISH_DRY_RUN=1 只跑 npm publish --dry-run，不真正发布
 #   NPM_PROVENANCE=1  追加 --provenance（仅 GitHub Actions OIDC 环境可用）
 #   NODE_AUTH_TOKEN   CI 由 setup-node 注入；纯 OIDC（无 token）时预检自动跳过
+#   VERIFY_ATTEMPTS   发根包前等待平台包在 registry 可见的轮询次数，默认 20
+#   VERIFY_INTERVAL   上述轮询的间隔秒数，默认 30
 
 set -euo pipefail
 
@@ -69,6 +71,26 @@ npm_version_exists() {
     return 1
   fi
   die "查询 $pkg 失败：${code:-无法从 npm 输出解析错误码}（原始输出：$(printf '%s' "$out" | head -c 200)）"
+}
+
+# 等 $1@$NPM_VERSION 在 registry 可见，最多等 N 轮。
+# npm publish 返回 0 只代表 registry 已受理：写入侧与读取侧不同步，元数据要过几分钟
+# 才可读（v0.1.5 实测约 5 分钟）。只查一次就判失败，每次发布都会假报警——CI 里正是
+# 这样误杀了 v0.1.5 的根包；完全不查又可能把根包发在缺失平台包之上，而那个版本永久
+# 不可重发。故重试等待，超时才终止。
+wait_version_visible() {
+  local pkg="$1" attempt
+  local attempts="${VERIFY_ATTEMPTS:-20}" interval="${VERIFY_INTERVAL:-30}"
+  for attempt in $(seq 1 "$attempts"); do
+    if npm_version_exists "$pkg"; then
+      return 0
+    fi
+    info "    $pkg@$NPM_VERSION 尚不可见（第 $attempt/$attempts 次），${interval}s 后重试"
+    if [ "$attempt" -lt "$attempts" ]; then
+      sleep "$interval"
+    fi
+  done
+  return 1
 }
 
 # ── 前置检查 ──────────────────────────────────────────────────────────
@@ -206,16 +228,20 @@ done
 
 # ── 校验平台包全部就位后，才允许发根包 ────────────────────────────────
 if [ "$DRY_RUN" != "1" ]; then
+  info "确认六平台包在 registry 可见…"
   for entry in "${PLATFORMS[@]}"; do
     dir="${entry%%:*}"
     name="$(jq -r '.name' "$PROJECT_ROOT/npm/$dir/package.json")"
-    npm_version_exists "$name" || die "$name@$NPM_VERSION 未就位，根包不能先发"
+    wait_version_visible "$name" ||
+      die "$name@$NPM_VERSION 发布后 ${VERIFY_ATTEMPTS:-20}×${VERIFY_INTERVAL:-30}s 仍不可见，根包不能先发"
   done
   ok "六平台包均已就位"
 fi
 
 # ── 发布根包 ──────────────────────────────────────────────────────────
-ROOT_ARGS=(--registry "$REGISTRY")
+# 根包与平台包同为 scoped：scope 包默认 restricted，显式 --access public 与平台包保持一致，
+# package.json 的 publishConfig.access 是第二道保险，任一处丢失都不会静默发成私有包。
+ROOT_ARGS=(--registry "$REGISTRY" --access public)
 [ "$DRY_RUN" = "1" ] && ROOT_ARGS+=(--dry-run)
 [ "${NPM_PROVENANCE:-0}" = "1" ] && ROOT_ARGS+=(--provenance)
 

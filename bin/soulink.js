@@ -7,9 +7,9 @@ const { spawn } = require("child_process");
 const os = require("os");
 
 const { resolveNativeBinary } = require("../scripts/platform");
-// 安装说明链接取自 package.json 的 homepage：与包元数据共用一处真相，换域名时
-// 不会漏掉错误提示里的这一份。
-const { homepage } = require("../package.json");
+// 错误提示里的包名与安装链接都取自 package.json：与包元数据共用一处真相，
+// 改名或换域名时不会漏掉这里的一份。包名带 scope，而命令名（bin）仍是 soulink。
+const { homepage, name } = require("../package.json");
 
 // ── 可测试的纯逻辑 ────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ function main() {
         `        当前平台：${process.platform}/${process.arch}\n` +
         "        常见原因：安装时带了 --omit=optional（或 --no-optional），\n" +
         "        导致平台二进制包被跳过。请重新安装：\n" +
-        "          npm install -g soulink\n" +
+        "          npm install -g " + name + "\n" +
         `        其他安装方式见 ${homepage}`
     );
     process.exit(1);

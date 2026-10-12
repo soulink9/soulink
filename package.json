@@ -1,5 +1,5 @@
 {
-  "name": "soulink",
+  "name": "@soulink9/soulink",
   "version": "0.0.0",
   "description": "把本地 Web 服务（含 WebSocket）一条命令分享出去",
   "bin": {
