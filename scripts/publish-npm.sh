@@ -55,7 +55,8 @@ npm_version_exists() {
     if [ "$(printf '%s' "$out" | jq -r '.')" = "$NPM_VERSION" ]; then
       return 0
     fi
-    return 1
+    # 成功退出却拿不到预期版本：不猜测，更不当作「不存在」而去发布，直接报错
+    die "查询 $pkg 返回了非预期结果：$(printf '%s' "$out" | head -c 200)"
   fi
   code="$(printf '%s' "$out" | jq -r '.error.code // empty' 2>/dev/null || true)"
   if [ "$code" = "E404" ]; then
@@ -64,12 +65,9 @@ npm_version_exists() {
   die "查询 $pkg 失败：${code:-无法从 npm 输出解析错误码}（原始输出：$(printf '%s' "$out" | head -c 200)）"
 }
 
-# ── 版本 ──────────────────────────────────────────────────────────────
-VERSION_TAG="${VERSION_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || true)}"
-[ -n "$VERSION_TAG" ] || die "取不到版本；请显式指定 VERSION_TAG=vX.Y.Z"
-NPM_VERSION="${VERSION_TAG#v}"
-
 # ── 前置检查 ──────────────────────────────────────────────────────────
+# 必须在版本解析之前：下一段用 git describe 取版本，缺 git 时它会静默失败
+# （|| true），最后报成误导性的「取不到版本」，掩盖真正的原因。
 for cmd in npm jq git; do
   command -v "$cmd" >/dev/null 2>&1 || die "缺少命令：$cmd"
 done
@@ -78,6 +76,11 @@ if [ "$SKIP_BUILD" != "1" ]; then
   command -v go >/dev/null 2>&1 ||
     die "缺少命令：go（构建需要；SKIP_BUILD=1 可复用现有 dist/）"
 fi
+
+# ── 版本 ──────────────────────────────────────────────────────────────
+VERSION_TAG="${VERSION_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || true)}"
+[ -n "$VERSION_TAG" ] || die "取不到版本；请显式指定 VERSION_TAG=vX.Y.Z"
+NPM_VERSION="${VERSION_TAG#v}"
 
 # 发布过程要临时改写 package.json（结束还原），脏工作树会让还原语义不确定
 [ -z "$(git status --porcelain)" ] || die "工作树有未提交改动，请先提交或 stash"
@@ -120,9 +123,23 @@ restore() {
 }
 trap restore EXIT
 
-# ── 组装平台包 ────────────────────────────────────────────────────────
-# 顺带收集包名，供下面注入版本时做白名单。
+# ── 平台映射一致性校验 ────────────────────────────────────────────────
+# 平台清单在三处各自维护：platform.js 的 PLATFORM_PKG、根 package.json 的
+# optionalDependencies、本脚本的 PLATFORMS。任一处漏改都会静默失配——运行时解析
+# 不到二进制，却很难定位到根因，故先把键集对齐再动手。
 PLATFORM_PKGS=()
+for entry in "${PLATFORMS[@]}"; do
+  dir="${entry%%:*}"
+  PLATFORM_PKGS+=("$(jq -r '.name' "$PROJECT_ROOT/npm/$dir/package.json")")
+done
+EXPECTED="$(printf '%s\n' "${PLATFORM_PKGS[@]}" | jq -R . | jq -s -c 'sort')"
+DECLARED="$(jq -c '.optionalDependencies | keys | sort' "$PROJECT_ROOT/package.json")"
+[ "$EXPECTED" = "$DECLARED" ] ||
+  die "PLATFORMS 与 package.json 的 optionalDependencies 不一致：
+    脚本：$EXPECTED
+    包内：$DECLARED"
+
+# ── 组装平台包 ────────────────────────────────────────────────────────
 for entry in "${PLATFORMS[@]}"; do
   IFS=':' read -r dir dist_bin bin_name <<< "$entry"
   src="$PROJECT_ROOT/dist/$dist_bin"
@@ -132,7 +149,6 @@ for entry in "${PLATFORMS[@]}"; do
   # CI 里产物经 upload/download-artifact 传递，而 v4 不保留文件模式，故此处 chmod
   # 不能省：少了它，用户装到的二进制没有可执行位。
   chmod 755 "$PROJECT_ROOT/npm/$dir/bin/$bin_name" 2>/dev/null || true
-  PLATFORM_PKGS+=("$(jq -r '.name' "$PROJECT_ROOT/npm/$dir/package.json")")
 done
 ok "六平台二进制已就位"
 

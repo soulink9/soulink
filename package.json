@@ -9,6 +9,9 @@
     "bin/soulink.js",
     "scripts/platform.js"
   ],
+  "scripts": {
+    "prepublishOnly": "node -e \"if(require('./package.json').version==='0.0.0'){console.error('[ERROR] version 仍是占位符 0.0.0：请用 scripts/publish-npm.sh 发布，它会注入真实版本');process.exit(1)}\""
+  },
   "optionalDependencies": {
     "@soulink9/soulink-darwin-arm64": "0.0.0",
     "@soulink9/soulink-darwin-x64": "0.0.0",
