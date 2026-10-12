@@ -1,0 +1,36 @@
+{
+  "name": "soulink",
+  "version": "0.0.0",
+  "description": "把本地 Web 服务（含 WebSocket）一条命令分享出去",
+  "bin": {
+    "soulink": "bin/soulink.js"
+  },
+  "files": [
+    "bin/soulink.js",
+    "scripts/platform.js"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "prepublishOnly": "node -e \"const p=require('./package.json');if(p.version==='0.0.0'||Object.values(p.optionalDependencies||{}).some(v=>v==='0.0.0')){console.error('[ERROR] 版本仍是占位符 0.0.0（根包或平台包）：请用 scripts/publish-npm.sh 发布，它会注入真实版本');process.exit(1)}\""
+  },
+  "optionalDependencies": {
+    "@soulink9/soulink-darwin-arm64": "0.0.0",
+    "@soulink9/soulink-darwin-x64": "0.0.0",
+    "@soulink9/soulink-linux-arm64": "0.0.0",
+    "@soulink9/soulink-linux-x64": "0.0.0",
+    "@soulink9/soulink-win32-arm64": "0.0.0",
+    "@soulink9/soulink-win32-x64": "0.0.0"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soulink9/soulink.git"
+  },
+  "homepage": "https://www.soulink.cam",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

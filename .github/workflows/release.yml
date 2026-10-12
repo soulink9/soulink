@@ -6,6 +6,13 @@ on:
   push:
     tags: ['v*']
 
+# 同一 tag 重复推送（如删了重建）不得并行：两个流水线会同时向 npm 发布同一版本，
+# 判重与发布之间构成竞态。cancel-in-progress 保持 false——发布中途被取消会留下
+# 「平台包只发了一半」的状态，比串行多等一会儿更糟。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -25,7 +32,68 @@ jobs:
       - name: Build six-platform archives
         run: make dist
 
+      # 把产物递给 npm job：两个 job 是各自独立的 runner，不传就得再编一遍六平台。
+      # retention 留 7 天而非 1 天：GitHub 的「重跑失败的 job」会复用本 run 已上传的
+      # artifact，留太短会让隔天的重跑取不到产物，只能整体重来，连带多走一次
+      # Release 的 --clobber 分支。
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+      # 资产用显式枚举，不要图省事写成 dist/*：dist/ 里还留着裸二进制（npm 平台包
+      # 从中取用），一并上传会污染 Release 资产。这个约束靠本行维持，改前先读
+      # Makefile 的 dist 目标。
+      # 已存在时走 upload --clobber 补资产，而不是直接跳过：上一次运行可能在
+      # 创建 Release 之后、上传资产之前中断，或 Release 是被手工建出来的。
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.zip dist/checksums.txt --title "${GITHUB_REF_NAME}" --generate-notes
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.zip dist/checksums.txt --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.zip dist/checksums.txt --title "${GITHUB_REF_NAME}" --generate-notes
+          fi
+
+  # 依赖 release job：平台包与根包发布后，用户 npm 安装即拿到与本次 Release 同版本的二进制。
+  # 认证：npm CLI 检测到 OIDC 环境即优先用 trusted publishing，未配置时回落到 NPM_TOKEN。
+  # bypass-2FA token 将于 2027-01 失去 direct publish，故此处按 OIDC 先行准备。
+  npm:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # npm provenance 走 OIDC，需此权限
+    steps:
+      # 只用到工作树（脚本会校验 git status 干净）。版本由 VERSION_TAG 显式给出，
+      # 不走 git describe，故不需要完整 tag 历史。
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      # 刻意不设 registry-url：那会让 setup-node 往 .npmrc 写入
+      # `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`，未配 NPM_TOKEN 时
+      # 该行展开为空 token，与 OIDC 相互干扰。认证改由下一步按需注入。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # trusted publishing 要求 npm CLI ≥ 11.5.1；Node 24 自带 11.19
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION_TAG: ${{ github.ref_name }}
+          NPM_PROVENANCE: 1
+          SKIP_BUILD: '1' # 产物已由 release job 编好并经 artifact 传下来
+        run: |
+          # 只在确实拿到 token 时才写认证行：未配 token 时 .npmrc 保持干净，
+          # npm 才会干净地走 OIDC trusted publishing
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "$HOME/.npmrc"
+          fi
+          bash scripts/publish-npm.sh

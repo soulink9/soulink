@@ -1,0 +1,23 @@
+{
+  "name": "@soulink9/soulink-darwin-x64",
+  "version": "0.0.0",
+  "description": "soulink 平台二进制（darwin x64，随主包自动安装）",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/"
+  ],
+  "preferUnplugged": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soulink9/soulink.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
