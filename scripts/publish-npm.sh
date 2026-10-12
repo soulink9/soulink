@@ -49,13 +49,19 @@ die()  { printf '\033[0;31m[ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 # 误判成「已存在」会跳过平台包，随后根包照发，那个版本号就废了（npm 不允许重发
 # 同一版本）。仅 E404 视为「不存在」，其余错误一律终止。
 npm_version_exists() {
-  local pkg="$1" out code
+  local pkg="$1" out code got
   # 只看 stdout：npm 的错误 JSON 写 stdout，人类可读的日志写 stderr
   if out="$(npm view "$pkg@$NPM_VERSION" version --registry "$REGISTRY" --json 2>/dev/null)"; then
-    if [ "$(printf '%s' "$out" | jq -r '.')" = "$NPM_VERSION" ]; then
+    got="$(printf '%s' "$out" | jq -r '.' 2>/dev/null || true)"
+    if [ "$got" = "$NPM_VERSION" ]; then
       return 0
     fi
-    # 成功退出却拿不到预期版本：不猜测，更不当作「不存在」而去发布，直接报错
+    if [ -z "$got" ]; then
+      # 部分 registry 对「版本不存在」返回退出码 0 + 空输出，按不存在处理。万一
+      # 版本其实已被占用，随后的 npm publish 会报冲突——仍是安全的那一侧。
+      return 1
+    fi
+    # 拿到非预期结果：不猜测，更不当作「不存在」而去发布，直接报错
     die "查询 $pkg 返回了非预期结果：$(printf '%s' "$out" | head -c 200)"
   fi
   code="$(printf '%s' "$out" | jq -r '.error.code // empty' 2>/dev/null || true)"
@@ -139,6 +145,14 @@ DECLARED="$(jq -c '.optionalDependencies | keys | sort' "$PROJECT_ROOT/package.j
     脚本：$EXPECTED
     包内：$DECLARED"
 
+# platform.js 的 PLATFORM_PKG 是运行时解析平台包的唯一依据，也要纳入：只对齐另两处
+# 仍可能留下「发布成功但用户装不起来」的静默失配。
+PLATFORM_JS="$(node -e 'process.stdout.write(JSON.stringify(Object.values(require("./scripts/platform").PLATFORM_PKG).sort()))' 2>/dev/null || true)"
+[ "$PLATFORM_JS" = "$EXPECTED" ] ||
+  die "PLATFORMS 与 scripts/platform.js 的 PLATFORM_PKG 不一致：
+    脚本：$EXPECTED
+    platform.js：${PLATFORM_JS:-（读取失败）}"
+
 # ── 组装平台包 ────────────────────────────────────────────────────────
 for entry in "${PLATFORMS[@]}"; do
   IFS=':' read -r dir dist_bin bin_name <<< "$entry"
@@ -147,8 +161,9 @@ for entry in "${PLATFORMS[@]}"; do
   mkdir -p "$PROJECT_ROOT/npm/$dir/bin"
   cp "$src" "$PROJECT_ROOT/npm/$dir/bin/$bin_name"
   # CI 里产物经 upload/download-artifact 传递，而 v4 不保留文件模式，故此处 chmod
-  # 不能省：少了它，用户装到的二进制没有可执行位。
-  chmod 755 "$PROJECT_ROOT/npm/$dir/bin/$bin_name" 2>/dev/null || true
+  # 不能省。也不加 || true：权限没设上就该终止——同版本不可重发，把不可执行的
+  # 二进制推出去，代价是由用户承担的。
+  chmod 755 "$PROJECT_ROOT/npm/$dir/bin/$bin_name"
 done
 ok "六平台二进制已就位"
 

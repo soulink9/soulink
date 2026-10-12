@@ -20,3 +20,8 @@ jobs:
           go-version-file: go.mod
       - run: go vet ./...
       - run: go test ./... -count=1
+      # launcher 的 Node 单测（test/launcher.test.js）：不在这里跑就形同虚设
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test

@@ -55,4 +55,6 @@ function resolveNativeBinary() {
   return null;
 }
 
-module.exports = { resolveNativeBinary };
+// PLATFORM_PKG 也导出：publish-npm.sh 发布前会读它，与根 package.json 的
+// optionalDependencies、脚本内的 PLATFORMS 做三方一致性校验。
+module.exports = { PLATFORM_PKG, resolveNativeBinary };
